@@ -1,0 +1,124 @@
+/* estilos.css — tokens de identidad y estilos de pantallas de sistema.
+   ⚠️ Paleta institucional: propuesta de trabajo, verificar contra el manual
+   de marca oficial de la Municipalidad antes de producción (ver README). */
+
+:root {
+  /* Institucional */
+  --smt-azul:        #0F4C81;
+  --smt-azul-hondo:  #0A3459;
+  --smt-celeste:     #4FA3D1;
+  --smt-dorado:      #C8A951;
+  --smt-blanco:      #F7F9FB;
+
+  /* Funcionales del juego */
+  --ok:              #3FA66B;
+  --error:           #C0453B;
+
+  /* Ambiente 3D — Tucumán */
+  --cielo-alto:      #7FB6D9;
+  --cielo-bajo:      #F0D9A8;
+  --cerro-lejos:     #6E7FA0;
+  --cerro-cerca:     #4E6B58;
+  --tierra:          #A8724A;
+}
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+html,
+body {
+  height: 100%;
+  overflow: hidden;
+}
+
+body {
+  /* Fuente del sistema por ahora; en la fase de arte se incrusta la definitiva
+     (requisito offline: nada de fuentes remotas). */
+  font-family: system-ui, "Segoe UI", Arial, sans-serif;
+  background: var(--smt-azul-hondo);
+  color: var(--smt-blanco);
+}
+
+#app {
+  height: 100%;
+}
+
+/* ---------- Pantalla de diagnóstico de entrada (Fase 1) ---------- */
+
+.diagnostico {
+  height: 100%;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 2rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.diagnostico h1 {
+  font-size: 36px;
+  font-weight: 700;
+  color: var(--smt-celeste);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.diagnostico .instruccion {
+  font-size: 32px;
+  max-width: 60ch;
+}
+
+/* El código de la última tecla: enorme, legible desde lejos.
+   clamp() lo achica en ventanas chicas para que nunca desborde la placa. */
+.diagnostico .codigo-actual {
+  font-size: clamp(40px, 11vw, 120px);
+  max-width: 90vw;
+  overflow-wrap: anywhere;
+  font-weight: 700;
+  line-height: 1.1;
+  min-height: 1.1em;
+  padding: 0.2em 0.6em;
+  border-radius: 0.15em;
+  background: var(--smt-azul);
+  color: var(--smt-dorado);
+  font-variant-numeric: tabular-nums;
+}
+
+.diagnostico .codigo-actual.repetida {
+  color: var(--smt-blanco);
+  opacity: 0.6;
+}
+
+.diagnostico .detalle {
+  font-size: 32px;
+  color: var(--smt-celeste);
+  min-height: 1.4em;
+}
+
+/* Historial de eventos */
+.diagnostico .historial {
+  list-style: none;
+  font-size: 32px;
+  font-variant-numeric: tabular-nums;
+  opacity: 0.85;
+  display: flex;
+  flex-direction: column-reverse;
+  gap: 0.1em;
+  max-height: 30vh;
+  overflow: hidden;
+}
+
+.diagnostico .historial .repetida {
+  opacity: 0.45;
+}
+
+/* Resumen de códigos distintos vistos */
+.diagnostico .codigos-vistos {
+  font-size: 32px;
+  color: var(--smt-dorado);
+  max-width: 80vw;
+}

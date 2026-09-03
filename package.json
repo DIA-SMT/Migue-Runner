@@ -1,0 +1,18 @@
+{
+  "name": "migue-runner",
+  "private": true,
+  "version": "0.1.0",
+  "description": "Endless runner con trivia sobre Tucumán y San Miguel de Tucumán, controlado con un puntero presentador USB de dos botones.",
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
+  },
+  "devDependencies": {
+    "vite": "^8.2.2"
+  },
+  "dependencies": {
+    "three": "^0.185.1"
+  }
+}

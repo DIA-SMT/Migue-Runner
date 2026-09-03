@@ -1,0 +1,15 @@
+# Dependencias y build
+node_modules/
+dist/
+
+# Tooling local
+.claude/
+.vscode/
+.DS_Store
+
+# Assets fuente pesados que viven fuera del repo
+# (el modelo optimizado sí se versiona en public/models/)
+*.zip
+*.jpeg
+*.jpg
+*.fbx
