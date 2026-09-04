@@ -2,7 +2,7 @@
 // Regla del proyecto: ningún número que afecte la jugabilidad va inline en otro módulo.
 
 export const ENTRADA = {
-  // Tiempo mínimo entre dos pulsaciones válidas del mismo botón.
+  // Tiempo mínimo entre dos pulsaciones válidas de la misma acción.
   // Los punteros presentadores emiten auto-repeat si se mantiene apretado.
   DEBOUNCE_MS: 150,
 
@@ -11,8 +11,8 @@ export const ENTRADA = {
 
   // Teclado físico como respaldo, en paralelo al puntero calibrado.
   RESPALDO_TECLADO: {
-    saltar: 'Space',
-    agacharse: 'ShiftLeft',
+    saltar: ['Space', 'ArrowUp'],
+    agacharse: ['ShiftLeft', 'ArrowDown'],
   },
 
   // Recalibración: tecla física, o mantener ambos botones del puntero.
@@ -26,30 +26,64 @@ export const DIAGNOSTICO = {
 };
 
 // ---------------------------------------------------------------------------
-// Paleta del ambiente 3D (espejo de los tokens CSS, en hexa numérico).
+// Paleta (espejo de los tokens CSS + colores del centro urbano, en hexa).
 // ⚠️ Propuesta de trabajo: validar contra el manual de marca antes de producción.
 // ---------------------------------------------------------------------------
 export const PALETA = {
+  // Cielo y fondo
   CIELO_ALTO: 0x7fb6d9,
   CIELO_BAJO: 0xf0d9a8, // horizonte cálido, luz de siesta
   CERRO_LEJOS: 0x6e7fa0,
-  CERRO_MEDIO: 0x5d7385, // intermedio entre lejos y cerca, para la 2ª capa
+  CERRO_MEDIO: 0x5d7385,
   CERRO_CERCA: 0x4e6b58, // verde de las yungas
-  TIERRA: 0xa8724a,
-  TIERRA_OSCURA: 0x8a5c3b, // borde del sendero
-  CAMPO: 0x7da05a, // verde de los campos a los costados
-  CANA_TALLO: 0x8fae5a, // caña de azúcar: tallo
-  CANA_HOJA: 0x5c8a4b, // caña de azúcar: hojas
   SOL: 0xffd75e,
   NUBE: 0xfdf4e3,
-  NIEBLA: 0xead9b0, // color de la FogExp2, tono del horizonte
-  LUZ_CALIDA: 0xffe3b3, // DirectionalLight (sol de la siesta)
-  LUZ_FRIA: 0xbfd8e8, // AmbientLight de relleno
+  NIEBLA: 0xead9b0,
+  LUZ_CALIDA: 0xffe3b3,
+  LUZ_FRIA: 0xbfd8e8,
+
+  // Calle
+  BALDOSA: 0xd9cfc0, // baldosa clara de la peatonal
+  BALDOSA_GUARDA: 0xb35a4a, // guarda roja central
+  BALDOSA_LINEA: 0xb9ad9c, // juntas entre baldosas
+  BASE_URBANA: 0xa9a396, // suelo neutro bajo los edificios
+
+  // Edificios coloniales (pasteles)
+  PASTELES: [0xf2e3c9, 0xe8b4a0, 0xbcd6e0, 0xe9d68a, 0xd9b8c4, 0xcfd8c9],
+  CORNISA: 0xfaf6ec,
+  PUERTA: 0x4a3527,
+  VENTANA: 0x35464f,
+
+  // Casa Histórica
+  BLANCO_COLONIAL: 0xf5f1e6,
+  TEJA: 0xa85a40,
+  VERDE_COLONIAL: 0x2e4a3a,
+  PIEDRA_PORTAL: 0xe4dbc4,
+
+  // Catedral
+  CREMA_CATEDRAL: 0xf0e6cd,
+  CUPULA: 0x7f9bb3,
+  DORADO: 0xc8a951,
+
+  // Mobiliario urbano
+  FAROL_POSTE: 0x2f4f3f,
+  FAROL_LUZ: 0xffe9b0,
+  LAPACHO_TRONCO: 0x6b4a34,
+  LAPACHO_FLOR: 0xf2a9d4, // rosa lapacho
+
+  // Obstáculos
+  VALLA_NARANJA: 0xe0762e,
+  VALLA_BLANCO: 0xf7f9fb,
+  CARTEL_POSTE: 0x51606d,
+  PORTAL_MARCO: 0x4fa3d1, // celeste institucional (se multiplica para el glow)
 };
 
 export const MUNDO = {
-  // Velocidad de scroll del mundo en unidades/segundo (la de arranque del juego).
-  VELOCIDAD: 8,
+  // Velocidades de scroll en unidades/segundo.
+  VELOCIDAD_INICIAL: 8,
+  VELOCIDAD_MAX: 15,
+  ACELERACION: 0.06, // unidades/s² (crecimiento suave y continuo)
+  VELOCIDAD_ATRACCION: 2.5, // paseo lento en la pantalla de espera
 
   // Densidad de la FogExp2: oculta el borde donde aparece el decorado.
   NIEBLA_DENSIDAD: 0.006,
@@ -57,42 +91,101 @@ export const MUNDO = {
   // Suelo
   SUELO_ANCHO: 90,
   SUELO_LARGO: 420,
-  SENDERO_ANCHO: 3, // ancho del sendero de tierra, en unidades de mundo
+  PEATONAL_ANCHO: 9.6, // ancho de la peatonal (los edificios arrancan al borde)
 
-  // Cañaverales: dos bandas por lado que se turnan (leapfrog) al reciclarse.
-  // Cada instancia es una mata (varios tallos), no una caña suelta.
-  CANA_LARGO_BANDA: 120, // largo en Z de cada banda
-  CANA_POR_BANDA: 110, // matas por banda
-  CANA_DISTANCIA_X: 3.4, // distancia mínima del centro del sendero
-  CANA_ANCHO_BANDA_X: 9, // dispersión en X de cada banda
-  CANA_ALTURA: 2.6, // altura media de una mata
+  // Edificios: dos bandas que se turnan (leapfrog) al reciclarse.
+  // Cada banda es UNA malla fusionada (casas + faroles + lapachos).
+  EDIFICIO_FRENTE_X: 5.4, // línea de fachadas (desde el centro de la calle)
+  BANDA_LARGO: 130, // largo en Z de cada banda
+  FAROL_CADA: 22, // separación en Z entre faroles
+  LAPACHO_CADA: 26, // separación en Z entre lapachos
 
-  // Lomas intermedias (capa de parallax que sí se mueve, a media velocidad)
+  // Lomas intermedias (parallax en movimiento, asoman sobre los techos)
   LOMAS_CANTIDAD: 8,
   LOMAS_FACTOR_VELOCIDAD: 0.45,
-  LOMAS_LARGO_CICLO: 360, // recorrido en Z antes de reciclarse
-  LOMAS_X_MIN: 16, // qué tan lejos del sendero aparecen
-  LOMAS_X_MAX: 55,
+  LOMAS_LARGO_CICLO: 360,
+  LOMAS_X_MIN: 30,
+  LOMAS_X_MAX: 60,
 
   // Nubes decorativas
   NUBES_CANTIDAD: 6,
-  NUBES_DERIVA: 0.6, // deriva lateral en unidades/segundo
+  NUBES_DERIVA: 0.6,
 };
 
 export const CAMARA = {
   FOV: 55,
   POSICION: { x: 0, y: 2.2, z: 4.2 },
-  MIRA: { x: 0, y: 1.2, z: -6 }, // punto al que mira, delante de Migue
+  MIRA: { x: 0, y: 1.2, z: -6 },
 };
 
 export const JUGADOR = {
-  ALTURA: 1.8, // altura objetivo de Migue en unidades de mundo
+  ALTURA: 1.8, // altura visual de Migue en unidades de mundo
 
   // El modelo no trae animaciones: se simula la carrera con bobbing procedural.
-  BOB_FRECUENCIA: 9, // pasos por segundo (ida y vuelta del seno)
-  BOB_AMPLITUD: 0.07, // rebote vertical en unidades
+  BOB_FRECUENCIA: 9, // pasos por segundo
+  BOB_AMPLITUD: 0.07,
   BOB_BALANCEO: 0.045, // balanceo lateral en radianes
-  INCLINACION: 0.12, // inclinación fija hacia adelante en radianes (actitud de correr)
+  INCLINACION: 0.12, // inclinación fija hacia adelante (actitud de correr)
+
+  // Respiración del modo idle (pantalla de atracción)
+  IDLE_FRECUENCIA: 1.4,
+  IDLE_AMPLITUD: 0.02,
+
+  // Hitbox propia, más chica que el modelo: perdonar se siente mejor.
+  HITBOX: {
+    ALTO: 1.5,
+    ALTO_AGACHADO: 0.85,
+    PROFUNDO: 0.5,
+  },
+};
+
+export const SALTO = {
+  VELOCIDAD_INICIAL: 5.6, // hacia arriba, unidades/s
+  GRAVEDAD: 18, // unidades/s² → ~0.62 s de aire, ~0.87 de altura
+};
+
+export const AGACHADA = {
+  MIN_S: 0.4, // dura al menos esto aunque se suelte antes
+  ESCALA_Y: 0.55, // achatamiento visual del modelo
+  VELOCIDAD_TRANSICION: 12, // qué tan rápido se interpola la escala
+};
+
+export const OBSTACULOS = {
+  Z_SPAWN: -170, // dónde nacen (la niebla tapa el borde)
+  Z_FUERA: 10, // pasada esta z quedan atrás y se reciclan
+  INTERVALO_MIN_S: 1.9, // separación temporal entre obstáculos
+  INTERVALO_MAX_S: 3.2,
+  REACCION_MIN_S: 1.2, // ningún obstáculo puede quedar a menos de esto del jugador
+  INVULNERABLE_S: 1.3, // tras un golpe, ventana sin daño (parpadeo)
+
+  // Bajo: valla municipal (se salta)
+  VALLA: { ANCHO: 2.6, ALTO: 0.62, PROFUNDO: 0.25 },
+
+  // Alto: cartel colgante entre postes (se pasa agachado)
+  CARTEL: { ALTO_LIBRE: 1.35, PANEL_ALTO: 1.0, ANCHO: 3.6, PROFUNDO: 0.15 },
+};
+
+export const TRIVIA = {
+  INTERVALO_S: 14, // cada cuánto aparece un portal de pregunta
+  AVISO_S: 3.2, // el enunciado se lee este tiempo antes de llegar al portal
+  DATO_S: 4, // cuánto queda en pantalla el dato posterior
+  SUPRESION_OBSTACULOS_S: 2.5, // sin obstáculos nuevos alrededor del portal
+
+  PUNTOS_ACIERTO: 100,
+  BONO_RACHA: 25, // puntos extra por acierto consecutivo (x racha)
+
+  // Mezcla objetivo por partida
+  MEZCLA: { 'san-miguel': 0.5, tucuman: 0.3, general: 0.2 },
+
+  // Altura del portal: opción de arriba se cruza saltando, la de abajo agachado.
+  UMBRAL_AIRE_Y: 0.35, // por encima de esta altura el cruce cuenta como "arriba"
+};
+
+export const JUEGO = {
+  VIDAS: 3,
+  PUNTOS_POR_METRO: 1,
+  RESULTADO_VOLVER_S: 15, // vuelve solo a la atracción (stand desatendido)
+  RESULTADO_BLOQUEO_S: 1.2, // ignora botones apenas termina (evita saltearla sin querer)
 };
 
 export const LUCES = {
@@ -103,11 +196,10 @@ export const LUCES = {
 };
 
 export const POST = {
-  // Bloom sutil, y nada más (regla de la dirección de arte).
   BLOOM_FUERZA: 0.35,
   BLOOM_RADIO: 0.5,
   // Umbral 1.0: solo florecen los materiales con color fuera de rango
-  // (el sol); el resto de la escena queda limpio.
+  // (el sol, el marco de los portales); el resto queda limpio.
   BLOOM_UMBRAL: 1.0,
 };
 
@@ -115,6 +207,5 @@ export const RENDER = {
   // Techo de devicePixelRatio: en proyectores 1080p no hace falta más,
   // y protege los 60 fps en gráficos integrados.
   MAX_PIXEL_RATIO: 1.5,
-  // Muestras de antialiasing del render target del composer.
   MSAA_MUESTRAS: 4,
 };

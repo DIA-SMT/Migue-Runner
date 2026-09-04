@@ -1,15 +1,16 @@
-// player.js — Migue. Carga el .glb optimizado (public/models/migue.glb) y,
-// como el modelo no trae animaciones ni esqueleto, simula la carrera con
-// bobbing procedural: rebote vertical, balanceo lateral y una inclinación
-// fija hacia adelante (plan B previsto en el documento de contexto).
+// player.js — Migue: carga del modelo, salto, agachada e hitbox.
 //
-// La hitbox (fase de obstáculos) será una caja propia, NO la bounding box
-// del modelo; acá solo se resuelve la parte visual.
+// El .glb optimizado no trae animaciones ni esqueleto, así que la carrera se
+// simula con bobbing procedural y la agachada con un achatamiento de escala
+// (plan B previsto en el documento de contexto).
+//
+// La hitbox es una caja propia más chica que el modelo: perdonar al jugador
+// se siente mejor que castigarlo.
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { JUGADOR } from './config.js';
+import { JUGADOR, SALTO, AGACHADA } from './config.js';
 
 // Placeholder por si el .glb no carga (nunca romper la escena por un asset).
 function crearPlaceholder() {
@@ -28,7 +29,6 @@ async function cargarModelo() {
   loader.setMeshoptDecoder(MeshoptDecoder);
   const gltf = await loader.loadAsync('models/migue.glb');
 
-  // El documento pide verificar qué animaciones trae; se deja constancia.
   if (gltf.animations.length > 0) {
     console.info('migue.glb trae animaciones:', gltf.animations.map((a) => a.name));
   } else {
@@ -51,8 +51,6 @@ async function cargarModelo() {
   modelo.traverse((nodo) => {
     if (nodo.isMesh) {
       nodo.castShadow = true;
-      // El shading viene horneado como emissive (unlit); igual conviene
-      // desactivar el doble lado para ahorrar rasterizado.
       if (nodo.material) nodo.material.side = THREE.FrontSide;
     }
   });
@@ -69,23 +67,106 @@ export async function crearMigue(escena) {
     modelo = crearPlaceholder();
   }
 
-  // Grupo raíz: el bobbing anima al grupo, así el modelo interno queda intacto.
+  // contenedor: recibe la escala de la agachada (el modelo interno queda intacto).
+  // raiz: recibe salto + bobbing + balanceo.
+  const contenedor = new THREE.Group();
+  contenedor.add(modelo);
   const raiz = new THREE.Group();
-  raiz.add(modelo);
-  raiz.position.set(0, 0, 0);
+  raiz.add(contenedor);
   raiz.rotation.x = JUGADOR.INCLINACION;
   escena.add(raiz);
 
-  let tiempo = 0;
+  // ----- Estado físico -----
+  let saltoY = 0; // altura del salto (sin contar el bobbing)
+  let velocidadY = 0;
+  let agachadoDeseado = false; // el botón está apretado
+  let agachadoDesde = -Infinity; // reloj interno de la agachada (mínimo 0.4 s)
+  let relojInterno = 0;
+  let tiempoBob = 0;
+
+  const enAire = () => saltoY > 0.001 || velocidadY > 0;
+  const agachadoActivo = () =>
+    !enAire() && (agachadoDeseado || relojInterno - agachadoDesde < AGACHADA.MIN_S);
 
   return {
     objeto: raiz,
-    actualizar(dt) {
-      tiempo += dt;
-      const fase = tiempo * JUGADOR.BOB_FRECUENCIA;
-      // |sin| da dos apoyos por ciclo, como una zancada.
-      raiz.position.y = Math.abs(Math.sin(fase)) * JUGADOR.BOB_AMPLITUD;
-      raiz.rotation.z = Math.sin(fase) * JUGADOR.BOB_BALANCEO;
+
+    saltar() {
+      if (enAire() || agachadoActivo()) return false;
+      velocidadY = SALTO.VELOCIDAD_INICIAL;
+      return true;
+    },
+
+    // Se llama con true al apretar y false al soltar; el mínimo de 0.4 s
+    // se garantiza internamente.
+    agacharse(apretado) {
+      if (apretado && !enAire()) {
+        agachadoDeseado = true;
+        agachadoDesde = relojInterno;
+      } else if (!apretado) {
+        agachadoDeseado = false;
+      }
+    },
+
+    enAire,
+    estaAgachado: agachadoActivo,
+
+    // Alto actual de la hitbox y base (para el AABB de colisiones).
+    hitbox() {
+      return {
+        yMin: saltoY,
+        yMax: saltoY + (agachadoActivo() ? JUGADOR.HITBOX.ALTO_AGACHADO : JUGADOR.HITBOX.ALTO),
+        profundo: JUGADOR.HITBOX.PROFUNDO,
+      };
+    },
+
+    reiniciar() {
+      saltoY = 0;
+      velocidadY = 0;
+      agachadoDeseado = false;
+      agachadoDesde = -Infinity;
+      contenedor.scale.y = 1;
+      raiz.position.y = 0;
+      raiz.visible = true;
+    },
+
+    // modo: 'correr' (partida) o 'idle' (pantalla de atracción)
+    actualizar(dt, modo = 'correr') {
+      relojInterno += dt;
+
+      // Física del salto
+      if (enAire()) {
+        velocidadY -= SALTO.GRAVEDAD * dt;
+        saltoY += velocidadY * dt;
+        if (saltoY <= 0) {
+          saltoY = 0;
+          velocidadY = 0;
+        }
+      }
+
+      // Agachada: interpolar la escala del contenedor
+      const escalaObjetivo = agachadoActivo() ? AGACHADA.ESCALA_Y : 1;
+      contenedor.scale.y +=
+        (escalaObjetivo - contenedor.scale.y) * Math.min(1, AGACHADA.VELOCIDAD_TRANSICION * dt);
+
+      // Bobbing (solo con los pies en el suelo)
+      let bob = 0;
+      if (!enAire()) {
+        if (modo === 'correr') {
+          tiempoBob += dt;
+          const fase = tiempoBob * JUGADOR.BOB_FRECUENCIA;
+          bob = Math.abs(Math.sin(fase)) * JUGADOR.BOB_AMPLITUD;
+          raiz.rotation.z = Math.sin(fase) * JUGADOR.BOB_BALANCEO;
+        } else {
+          tiempoBob += dt;
+          bob = Math.abs(Math.sin(tiempoBob * JUGADOR.IDLE_FRECUENCIA)) * JUGADOR.IDLE_AMPLITUD;
+          raiz.rotation.z = 0;
+        }
+      } else {
+        raiz.rotation.z = 0;
+      }
+
+      raiz.position.y = saltoY + bob;
     },
   };
 }

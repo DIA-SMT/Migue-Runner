@@ -9,11 +9,46 @@
   <body>
     <div id="app"></div>
 
-    <!-- HUD de la vista previa de arte -->
-    <header class="hud-titulo">
-      <h1>Migue Runner</h1>
-      <p>Una carrera por Tucumán</p>
-    </header>
+    <!-- HUD de partida -->
+    <div id="hud" class="oculto">
+      <div id="hud-vidas" class="hud-placa"></div>
+      <div class="hud-derecha">
+        <div id="hud-puntaje" class="hud-placa">0</div>
+        <div id="hud-racha" class="hud-racha"></div>
+      </div>
+      <div id="hud-pregunta" class="oculto"></div>
+      <div id="hud-feedback" class="oculto"></div>
+    </div>
+
+    <!-- Pantalla de atracción -->
+    <div id="pantalla-atraccion">
+      <header class="hud-titulo">
+        <h1>Migue Runner</h1>
+        <p>Una carrera por Tucumán</p>
+      </header>
+      <footer class="atraccion-pie">
+        <div class="atraccion-controles">
+          <span>▲ SALTÁ <small>(Espacio / ⬆)</small></span>
+          <span>▼ AGACHATE <small>(Shift / ⬇)</small></span>
+        </div>
+        <p class="atraccion-prompt">APRETÁ UN BOTÓN PARA JUGAR</p>
+      </footer>
+    </div>
+
+    <!-- Pantalla de resultado -->
+    <div id="pantalla-resultado" class="oculto">
+      <div class="resultado-placa">
+        <h2>¡Fin de la carrera!</h2>
+        <p class="resultado-grande" id="resultado-puntaje">0</p>
+        <dl class="resultado-stats">
+          <div><dt>Trivia</dt><dd id="resultado-aciertos">0 / 0</dd></div>
+          <div><dt>Distancia</dt><dd id="resultado-distancia">0 m</dd></div>
+          <div><dt>Tiempo</dt><dd id="resultado-tiempo">0 s</dd></div>
+        </dl>
+        <p class="resultado-pie">Apretá un botón para volver a jugar</p>
+      </div>
+    </div>
+
     <p id="cargando" class="hud-cargando">Cargando a Migue…</p>
 
     <script type="module" src="/src/main.js"></script>

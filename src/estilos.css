@@ -1,6 +1,9 @@
-/* estilos.css — tokens de identidad y estilos de pantallas de sistema.
+/* estilos.css — tokens de identidad, HUD y pantallas de sistema.
    ⚠️ Paleta institucional: propuesta de trabajo, verificar contra el manual
-   de marca oficial de la Municipalidad antes de producción (ver README). */
+   de marca oficial de la Municipalidad antes de producción (ver README).
+
+   Regla de legibilidad de proyector: ningún texto por debajo de 32 px en
+   1080p, y siempre sobre placa. */
 
 :root {
   /* Institucional */
@@ -35,8 +38,8 @@ body {
 }
 
 body {
-  /* Fuente del sistema por ahora; en la fase de arte se incrusta la definitiva
-     (requisito offline: nada de fuentes remotas). */
+  /* Fuente del sistema por ahora; en la fase de arte final se incrusta la
+     definitiva (requisito offline: nada de fuentes remotas). */
   font-family: system-ui, "Segoe UI", Arial, sans-serif;
   background: var(--smt-azul-hondo);
   color: var(--smt-blanco);
@@ -50,7 +53,122 @@ body {
   display: block;
 }
 
-/* ---------- HUD sobre el canvas ---------- */
+.oculto {
+  display: none !important;
+}
+
+/* ---------- HUD de partida ---------- */
+
+#hud {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.hud-placa {
+  display: inline-block;
+  font-size: 40px;
+  font-weight: 800;
+  padding: 0.15em 0.55em;
+  border-radius: 0.25em;
+  background: color-mix(in srgb, var(--smt-azul-hondo) 82%, transparent);
+  color: var(--smt-blanco);
+  font-variant-numeric: tabular-nums;
+}
+
+#hud-vidas {
+  position: absolute;
+  top: 3vh;
+  left: 3vw;
+  color: var(--error);
+  letter-spacing: 0.08em;
+}
+
+.hud-derecha {
+  position: absolute;
+  top: 3vh;
+  right: 3vw;
+  text-align: right;
+}
+
+#hud-puntaje {
+  color: var(--smt-dorado);
+}
+
+.hud-racha {
+  margin-top: 0.3em;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--smt-dorado);
+  text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+}
+
+/* Enunciado de la pregunta: placa grande arriba al centro */
+#hud-pregunta {
+  position: absolute;
+  top: 4vh;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(80vw, 24em);
+  font-size: clamp(32px, 3.4vw, 46px);
+  font-weight: 700;
+  line-height: 1.25;
+  text-align: center;
+  padding: 0.45em 0.8em;
+  border-radius: 0.3em;
+  background: color-mix(in srgb, var(--smt-azul-hondo) 88%, transparent);
+  border-bottom: 5px solid var(--smt-dorado);
+}
+
+/* Feedback de respuesta (correcto / incorrecto / sin respuesta) */
+#hud-feedback {
+  position: absolute;
+  top: 26vh;
+  left: 50%;
+  transform: translateX(-50%);
+  max-width: min(78vw, 26em);
+  text-align: center;
+  padding: 0.5em 0.9em;
+  border-radius: 0.3em;
+  font-size: clamp(32px, 3vw, 42px);
+  background: color-mix(in srgb, var(--smt-azul-hondo) 88%, transparent);
+}
+
+#hud-feedback strong {
+  display: block;
+  font-weight: 800;
+}
+
+#hud-feedback span {
+  display: block;
+  margin-top: 0.35em;
+  font-size: 0.75em;
+  font-weight: 500;
+  color: var(--smt-blanco);
+}
+
+.feedback-ok {
+  border-bottom: 6px solid var(--ok);
+}
+.feedback-ok strong {
+  color: #7fd6a4;
+}
+
+.feedback-error {
+  border-bottom: 6px solid var(--error);
+}
+.feedback-error strong {
+  color: #e8968e;
+}
+
+.feedback-neutro {
+  border-bottom: 6px solid var(--smt-celeste);
+}
+.feedback-neutro strong {
+  color: var(--smt-celeste);
+}
+
+/* ---------- Título (pantalla de atracción) ---------- */
 
 .hud-titulo {
   position: fixed;
@@ -85,6 +203,122 @@ body {
   background: color-mix(in srgb, var(--smt-blanco) 78%, transparent);
   border-radius: 0.3em;
   padding: 0.1em 0.8em;
+}
+
+#pantalla-atraccion {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+}
+
+.atraccion-pie {
+  position: absolute;
+  bottom: 5vh;
+  left: 0;
+  right: 0;
+  text-align: center;
+}
+
+.atraccion-controles {
+  display: flex;
+  justify-content: center;
+  gap: 1.2em;
+  font-size: clamp(24px, 2.4vw, 34px);
+  font-weight: 700;
+}
+
+.atraccion-controles span {
+  background: color-mix(in srgb, var(--smt-azul-hondo) 82%, transparent);
+  padding: 0.3em 0.7em;
+  border-radius: 0.3em;
+}
+
+.atraccion-controles small {
+  font-size: 0.65em;
+  font-weight: 500;
+  color: var(--smt-celeste);
+}
+
+.atraccion-prompt {
+  display: table;
+  margin: 1em auto 0;
+  font-size: clamp(28px, 3vw, 40px);
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  color: var(--smt-azul-hondo);
+  background: var(--smt-dorado);
+  padding: 0.3em 0.9em;
+  border-radius: 0.3em;
+  animation: pulso 1.6s ease-in-out infinite;
+}
+
+@keyframes pulso {
+  0%, 100% { opacity: 1; transform: scale(1); }
+  50% { opacity: 0.75; transform: scale(0.97); }
+}
+
+/* ---------- Pantalla de resultado ---------- */
+
+#pantalla-resultado {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  pointer-events: none;
+  background: color-mix(in srgb, var(--smt-azul-hondo) 45%, transparent);
+}
+
+.resultado-placa {
+  text-align: center;
+  background: color-mix(in srgb, var(--smt-azul-hondo) 92%, transparent);
+  border-radius: 0.6em;
+  border-bottom: 8px solid var(--smt-dorado);
+  padding: 1em 2em;
+  min-width: min(80vw, 14em);
+}
+
+.resultado-placa h2 {
+  font-size: clamp(32px, 3.6vw, 48px);
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+  color: var(--smt-celeste);
+}
+
+.resultado-grande {
+  font-size: clamp(72px, 11vw, 140px);
+  font-weight: 800;
+  line-height: 1.1;
+  color: var(--smt-dorado);
+  font-variant-numeric: tabular-nums;
+}
+
+.resultado-stats {
+  display: flex;
+  justify-content: center;
+  gap: 2em;
+  margin-top: 0.4em;
+}
+
+.resultado-stats dt {
+  font-size: 32px;
+  font-weight: 500;
+  color: var(--smt-celeste);
+}
+
+.resultado-stats dd {
+  font-size: 38px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+.resultado-pie {
+  margin-top: 1em;
+  font-size: 32px;
+  font-weight: 700;
+  color: var(--smt-blanco);
+  animation: pulso 1.6s ease-in-out infinite;
 }
 
 .hud-cargando {
@@ -152,7 +386,6 @@ body {
   min-height: 1.4em;
 }
 
-/* Historial de eventos */
 .diagnostico .historial {
   list-style: none;
   font-size: 32px;
@@ -169,7 +402,6 @@ body {
   opacity: 0.45;
 }
 
-/* Resumen de códigos distintos vistos */
 .diagnostico .codigos-vistos {
   font-size: 32px;
   color: var(--smt-dorado);

@@ -20,19 +20,25 @@ npm run build
 ## Estado — orden de implementación
 
 - [x] **Fase 1 — Entrada**: página de diagnóstico que imprime el `event.code` de cada tecla, en [`/test-entrada.html`](test-entrada.html). Falta probarla con el puntero USB real y anotar los códigos de cada botón.
-- [ ] Fase 2 — Calibración (dos pasos + `localStorage`) — *pendiente hasta tener el puntero a mano*
-- [ ] Fase 3 — Prototipo gris (correr, saltar, agacharse)
-- [ ] Fase 4 — Obstáculos y colisión
-- [ ] Fase 5 — Trivia (portales dobles + `preguntas.json`)
-- [x] **Fase 6 — Modelo de Migue** *(adelantada)*: `.glb` optimizado de 47.7 MB → 1.45 MB (decimado a ~100k triángulos, textura WebP 1024, compresión meshopt). No trae animaciones: carrera simulada con bobbing procedural, como prevé el documento.
-- [x] **Fase 7 — Arte y ambiente** *(adelantada)*: cielo con degradé de siesta, sol con bloom, siluetas del Aconquija, lomas en parallax, cañaverales instanciados, sendero de tierra, niebla `FogExp2`, luz cálida + relleno frío. 60 fps, ~11 draw calls.
-- [ ] Fase 8 — Pulido de stand (atracción, auto-reset, pantalla completa)
+- [ ] **Fase 2 — Calibración** (dos pasos + `localStorage`) — *pendiente hasta tener el puntero a mano*. Mientras tanto el juego se controla con el teclado de respaldo: **Espacio/⬆ = saltar, Shift/⬇ = agacharse**.
+- [x] **Fase 3 — Correr, saltar, agacharse**: salto parabólico (~0.6 s), agachada con mínimo de 0.4 s, hitbox propia más chica que el modelo.
+- [x] **Fase 4 — Obstáculos y colisión**: vallas (se saltan) y carteles colgantes (se pasan agachado), AABB, 3 vidas con invulnerabilidad y parpadeo, velocidad creciente.
+- [x] **Fase 5 — Trivia**: portales dobles (arriba = saltar, abajo = agacharse), enunciado 3 s antes en el HUD, carga y validación de `preguntas.json` (24 preguntas iniciales), mezcla 50/30/20, sin repetición, posición correcta aleatorizada, dato posterior, puntaje con racha.
+- [x] **Fase 6 — Modelo de Migue**: `.glb` optimizado de 47.7 MB → 1.45 MB (decimado a ~100k triángulos, textura WebP 1024, compresión meshopt). No trae animaciones: carrera simulada con bobbing procedural, como prevé el documento.
+- [x] **Fase 7 — Arte y ambiente**: el **centro de San Miguel de Tucumán** — peatonal de baldosas con guarda roja, casas coloniales de pasteles, **Casa Histórica** y **Catedral** como hitos reconocibles, lapachos en flor, faroles, cerros del Aconquija de fondo, sol con bloom, niebla `FogExp2`. Cada banda de edificios es una sola malla fusionada (~15 draw calls en total).
+- [ ] Fase 8 — Pulido de stand (pantalla completa, prueba en proyector) — *la atracción y el auto-reset de 15 s ya están*.
 
-> La portada actual (`index.html`) es la **vista previa de arte**: el mundo en movimiento con Migue corriendo. El gameplay se integra al retomar las fases 2–5.
+> Estados implementados: `ATRACCIÓN → JUGANDO → RESULTADO → (vuelve solo a ATRACCIÓN a los 15 s)`. La CALIBRACIÓN se suma en la Fase 2.
 
-## Cómo probar la Fase 1
+## Cómo jugar (con teclado, hasta calibrar el puntero)
 
-1. `npm run dev` y abrir la URL en Chrome/Edge.
+- **Espacio o ⬆**: saltar (vallas, y elegir la opción de ARRIBA en la trivia)
+- **Shift o ⬇**: agacharse (carteles, y elegir la opción de ABAJO)
+- Cualquier botón arranca la partida desde la pantalla de espera.
+
+## Cómo probar el puntero USB (Fase 1)
+
+1. Abrir `/test-entrada.html` en Chrome/Edge.
 2. Enchufar el puntero presentador USB.
 3. Apretar cada botón: el `event.code` aparece gigante en pantalla, con historial, marca de auto-repeat y tiempo entre eventos.
 4. Anotar qué código emite el botón "adelante" y el "atrás" del modelo concreto (varía por marca: `PageDown`/`PageUp`, flechas, `Space`, etc.).

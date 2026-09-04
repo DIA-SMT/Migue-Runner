@@ -1,0 +1,269 @@
+{
+  "version": 1,
+  "preguntas": [
+    {
+      "id": "smt-001",
+      "categoria": "san-miguel",
+      "dificultad": 1,
+      "enunciado": "¿En qué año se fundó San Miguel de Tucumán?",
+      "opcionArriba": "1565",
+      "opcionAbajo": "1685",
+      "correcta": "arriba",
+      "dato": "Fundada por Diego de Villarroel; se trasladó a su emplazamiento actual en 1685.",
+      "activa": true
+    },
+    {
+      "id": "smt-002",
+      "categoria": "san-miguel",
+      "dificultad": 1,
+      "enunciado": "¿Dónde se declaró la Independencia argentina en 1816?",
+      "opcionArriba": "San Miguel de Tucumán",
+      "opcionAbajo": "Buenos Aires",
+      "correcta": "arriba",
+      "dato": "El 9 de julio de 1816, en la Casa Histórica.",
+      "activa": true
+    },
+    {
+      "id": "smt-003",
+      "categoria": "san-miguel",
+      "dificultad": 1,
+      "enunciado": "¿Qué estatua está en el centro de la Plaza Independencia?",
+      "opcionArriba": "La Libertad",
+      "opcionAbajo": "San Martín a caballo",
+      "correcta": "arriba",
+      "dato": "Es obra de la escultora tucumana Lola Mora.",
+      "activa": true
+    },
+    {
+      "id": "smt-004",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿Quién fundó San Miguel de Tucumán?",
+      "opcionArriba": "Pedro de Mendoza",
+      "opcionAbajo": "Diego de Villarroel",
+      "correcta": "abajo",
+      "dato": "La fundó en 1565, en el sitio conocido como Ibatín.",
+      "activa": true
+    },
+    {
+      "id": "smt-005",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿Frente a qué plaza está la Casa de Gobierno de Tucumán?",
+      "opcionArriba": "Plaza Urquiza",
+      "opcionAbajo": "Plaza Independencia",
+      "correcta": "abajo",
+      "dato": "Su cúpula y su fachada blanca son un ícono del centro tucumano.",
+      "activa": true
+    },
+    {
+      "id": "smt-006",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿Qué gran parque de la ciudad diseñó Carlos Thays?",
+      "opcionArriba": "Parque 9 de Julio",
+      "opcionAbajo": "Parque Avellaneda",
+      "correcta": "arriba",
+      "dato": "Thays también diseñó los bosques de Palermo en Buenos Aires.",
+      "activa": true
+    },
+    {
+      "id": "smt-007",
+      "categoria": "san-miguel",
+      "dificultad": 3,
+      "enunciado": "¿En qué año se trasladó la ciudad a su emplazamiento actual?",
+      "opcionArriba": "1685",
+      "opcionAbajo": "1810",
+      "correcta": "arriba",
+      "dato": "Se mudó desde Ibatín a La Toma, donde está hoy.",
+      "activa": true
+    },
+    {
+      "id": "smt-008",
+      "categoria": "san-miguel",
+      "dificultad": 1,
+      "enunciado": "¿Qué río pasa por el este de San Miguel de Tucumán?",
+      "opcionArriba": "Río Dulce",
+      "opcionAbajo": "Río Salí",
+      "correcta": "abajo",
+      "dato": "Separa la capital de Banda del Río Salí.",
+      "activa": true
+    },
+    {
+      "id": "smt-009",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿Cómo se llama la peatonal principal del centro?",
+      "opcionArriba": "Peatonal Muñecas",
+      "opcionAbajo": "Peatonal Florida",
+      "correcta": "arriba",
+      "dato": "Florida es la peatonal famosa de Buenos Aires.",
+      "activa": true
+    },
+    {
+      "id": "smt-010",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿Qué universidad nacional se fundó en la ciudad en 1914?",
+      "opcionArriba": "La UBA",
+      "opcionAbajo": "La UNT",
+      "correcta": "abajo",
+      "dato": "La Universidad Nacional de Tucumán, la más grande del NOA.",
+      "activa": true
+    },
+    {
+      "id": "smt-011",
+      "categoria": "san-miguel",
+      "dificultad": 1,
+      "enunciado": "¿En qué cerro está el Cristo Bendicente?",
+      "opcionArriba": "Cerro San Javier",
+      "opcionAbajo": "Cerro Aconquija",
+      "correcta": "arriba",
+      "dato": "Es obra del escultor tucumano Juan Carlos Iramain.",
+      "activa": true
+    },
+    {
+      "id": "smt-012",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿Qué batalla ganó Belgrano en 1812 junto a la ciudad?",
+      "opcionArriba": "Batalla de Salta",
+      "opcionAbajo": "Batalla de Tucumán",
+      "correcta": "abajo",
+      "dato": "Fue el 24 de septiembre de 1812; la de Salta llegó al año siguiente.",
+      "activa": true
+    },
+    {
+      "id": "tuc-001",
+      "categoria": "tucuman",
+      "dificultad": 1,
+      "enunciado": "¿Cuál es el apodo de Tucumán?",
+      "opcionArriba": "La Perla del Norte",
+      "opcionAbajo": "Jardín de la República",
+      "correcta": "abajo",
+      "dato": "Por sus paisajes verdes y su vegetación exuberante.",
+      "activa": true
+    },
+    {
+      "id": "tuc-002",
+      "categoria": "tucuman",
+      "dificultad": 1,
+      "enunciado": "¿Qué cultivo hizo famosa a Tucumán?",
+      "opcionArriba": "La caña de azúcar",
+      "opcionAbajo": "La soja",
+      "correcta": "arriba",
+      "dato": "La cosecha de la caña se llama zafra.",
+      "activa": true
+    },
+    {
+      "id": "tuc-003",
+      "categoria": "tucuman",
+      "dificultad": 1,
+      "enunciado": "Tucumán es el principal productor argentino de…",
+      "opcionArriba": "Manzanas",
+      "opcionAbajo": "Limones",
+      "correcta": "abajo",
+      "dato": "Y uno de los mayores productores de limón del mundo.",
+      "activa": true
+    },
+    {
+      "id": "tuc-004",
+      "categoria": "tucuman",
+      "dificultad": 2,
+      "enunciado": "¿Qué valle turístico tucumano está a unos 2000 m de altura?",
+      "opcionArriba": "Tafí del Valle",
+      "opcionAbajo": "Valle de Uco",
+      "correcta": "arriba",
+      "dato": "El Valle de Uco está en Mendoza.",
+      "activa": true
+    },
+    {
+      "id": "tuc-005",
+      "categoria": "tucuman",
+      "dificultad": 2,
+      "enunciado": "¿Qué ciudad sagrada indígena está en los Valles Calchaquíes?",
+      "opcionArriba": "Tilcara",
+      "opcionAbajo": "Ruinas de Quilmes",
+      "correcta": "abajo",
+      "dato": "Fue el mayor asentamiento de la nación diaguita.",
+      "activa": true
+    },
+    {
+      "id": "tuc-006",
+      "categoria": "tucuman",
+      "dificultad": 2,
+      "enunciado": "¿Dónde se hace el Festival Nacional de la Empanada?",
+      "opcionArriba": "Famaillá",
+      "opcionAbajo": "Monteros",
+      "correcta": "arriba",
+      "dato": "La empanada tucumana clásica se corta a cuchillo.",
+      "activa": true
+    },
+    {
+      "id": "tuc-007",
+      "categoria": "tucuman",
+      "dificultad": 1,
+      "enunciado": "¿Cuál es la provincia más chica de la Argentina?",
+      "opcionArriba": "Tucumán",
+      "opcionAbajo": "Jujuy",
+      "correcta": "arriba",
+      "dato": "Unos 22.500 km²: chica en tamaño, gigante en historia.",
+      "activa": true
+    },
+    {
+      "id": "gen-001",
+      "categoria": "general",
+      "dificultad": 1,
+      "enunciado": "¿Cuál es la capital de la Argentina?",
+      "opcionArriba": "Córdoba",
+      "opcionAbajo": "Buenos Aires",
+      "correcta": "abajo",
+      "dato": "",
+      "activa": true
+    },
+    {
+      "id": "gen-002",
+      "categoria": "general",
+      "dificultad": 2,
+      "enunciado": "¿Cuántas provincias tiene la Argentina?",
+      "opcionArriba": "23",
+      "opcionAbajo": "25",
+      "correcta": "arriba",
+      "dato": "23 provincias más la Ciudad Autónoma de Buenos Aires.",
+      "activa": true
+    },
+    {
+      "id": "gen-003",
+      "categoria": "general",
+      "dificultad": 1,
+      "enunciado": "¿Quién creó la bandera argentina?",
+      "opcionArriba": "José de San Martín",
+      "opcionAbajo": "Manuel Belgrano",
+      "correcta": "abajo",
+      "dato": "El mismo que ganó la Batalla de Tucumán en 1812.",
+      "activa": true
+    },
+    {
+      "id": "gen-004",
+      "categoria": "general",
+      "dificultad": 2,
+      "enunciado": "¿Cuál es el río más caudaloso de la Argentina?",
+      "opcionArriba": "Río Paraná",
+      "opcionAbajo": "Río Colorado",
+      "correcta": "arriba",
+      "dato": "Nace en Brasil y desemboca en el Río de la Plata.",
+      "activa": true
+    },
+    {
+      "id": "gen-005",
+      "categoria": "general",
+      "dificultad": 1,
+      "enunciado": "¿En qué año fue la Revolución de Mayo?",
+      "opcionArriba": "1816",
+      "opcionAbajo": "1810",
+      "correcta": "abajo",
+      "dato": "La Independencia se declaró seis años después, acá en Tucumán.",
+      "activa": true
+    }
+  ]
+}
