@@ -134,6 +134,94 @@
       "activa": true
     },
     {
+      "id": "smt-013",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿Cómo se llama la histórica estación de trenes de la ciudad?",
+      "opcionArriba": "Estación Mitre",
+      "opcionAbajo": "Estación Retiro",
+      "correcta": "arriba",
+      "dato": "De estilo afrancesado, de fines del siglo XIX.",
+      "activa": true
+    },
+    {
+      "id": "smt-014",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿En qué plaza tucumana está el monumento a Juan B. Alberdi?",
+      "opcionArriba": "Plaza Alberdi",
+      "opcionAbajo": "Plaza Belgrano",
+      "correcta": "arriba",
+      "dato": "Alberdi, autor de 'Bases', nació en San Miguel de Tucumán.",
+      "activa": true
+    },
+    {
+      "id": "smt-015",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿A qué virgen declaró Belgrano generala de su ejército?",
+      "opcionArriba": "Virgen del Valle",
+      "opcionAbajo": "Virgen de la Merced",
+      "correcta": "abajo",
+      "dato": "Cada 24 de setiembre se la procesiona por el centro tucumano.",
+      "activa": true
+    },
+    {
+      "id": "smt-016",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿En qué departamento está la ciudad capital?",
+      "opcionArriba": "Departamento Capital",
+      "opcionAbajo": "Departamento Cruz Alta",
+      "correcta": "arriba",
+      "dato": "",
+      "activa": true
+    },
+    {
+      "id": "smt-017",
+      "categoria": "san-miguel",
+      "dificultad": 3,
+      "enunciado": "¿Quién presidió el Congreso de Tucumán de 1816?",
+      "opcionArriba": "Francisco N. de Laprida",
+      "opcionAbajo": "Manuel Belgrano",
+      "correcta": "arriba",
+      "dato": "Era diputado por San Juan; asumió la presidencia del Congreso.",
+      "activa": true
+    },
+    {
+      "id": "smt-018",
+      "categoria": "san-miguel",
+      "dificultad": 3,
+      "enunciado": "¿Cómo se llamaba la ciudad antes de mudarse en 1685?",
+      "opcionArriba": "Ibatín",
+      "opcionAbajo": "Metán",
+      "correcta": "arriba",
+      "dato": "El sitio original, junto al río Salí, sufría inundaciones.",
+      "activa": true
+    },
+    {
+      "id": "smt-019",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿Cómo se apoda el aeropuerto de la ciudad?",
+      "opcionArriba": "Matienzo",
+      "opcionAbajo": "Ezeiza",
+      "correcta": "arriba",
+      "dato": "Su nombre completo es Teniente Benjamín Matienzo, aviador tucumano.",
+      "activa": true
+    },
+    {
+      "id": "smt-020",
+      "categoria": "san-miguel",
+      "dificultad": 2,
+      "enunciado": "¿Cómo se llama el área natural donde está el Cristo del cerro?",
+      "opcionArriba": "Parque Sierra San Javier",
+      "opcionAbajo": "Parque Los Alerces",
+      "correcta": "arriba",
+      "dato": "Reserva con selva de yungas, a minutos del centro.",
+      "activa": true
+    },
+    {
       "id": "tuc-001",
       "categoria": "tucuman",
       "dificultad": 1,

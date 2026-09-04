@@ -29,12 +29,24 @@
   margin: 0;
   padding: 0;
   box-sizing: border-box;
+  -webkit-tap-highlight-color: transparent;
 }
 
 html,
 body {
   height: 100%;
   overflow: hidden;
+  overscroll-behavior: none;
+}
+
+/* Mobile: el juego se controla tocando la pantalla (mitad de arriba/abajo),
+   así que hay que anular los gestos por defecto del navegador (zoom con
+   pellizco, doble-tap-zoom, selección de texto, menú de mantener apretado). */
+html {
+  touch-action: none;
+  -webkit-user-select: none;
+  user-select: none;
+  -webkit-touch-callout: none;
 }
 
 body {
@@ -275,6 +287,20 @@ body {
   color: var(--smt-dorado);
 }
 
+/* Dos hints por acción: uno para teclado/puntero, otro para pantalla
+   táctil. input.js marca <html class="es-tactil"> según el dispositivo. */
+.hint-tactil {
+  display: none;
+}
+
+:root.es-tactil .hint-teclado {
+  display: none;
+}
+
+:root.es-tactil .hint-tactil {
+  display: inline;
+}
+
 .atraccion-prompt {
   display: table;
   margin: 0 auto 0.8em;
@@ -310,8 +336,9 @@ body {
   background: color-mix(in srgb, var(--smt-azul-hondo) 92%, transparent);
   border-radius: 0.6em;
   border-bottom: 8px solid var(--smt-dorado);
-  padding: 1em 2em;
+  padding: 1em 1.4em;
   min-width: min(80vw, 14em);
+  max-width: min(94vw, 30em);
 }
 
 .resultado-placa h2 {
@@ -330,21 +357,24 @@ body {
   font-variant-numeric: tabular-nums;
 }
 
+/* flex-wrap + fuentes en clamp(): en un celular angosto las tres columnas
+   pasan a dos filas en vez de desbordar la placa hacia afuera de la pantalla. */
 .resultado-stats {
   display: flex;
+  flex-wrap: wrap;
   justify-content: center;
-  gap: 2em;
+  gap: 0.5em 1.6em;
   margin-top: 0.4em;
 }
 
 .resultado-stats dt {
-  font-size: 32px;
+  font-size: clamp(22px, 4vw, 32px);
   font-weight: 500;
   color: var(--smt-celeste);
 }
 
 .resultado-stats dd {
-  font-size: 38px;
+  font-size: clamp(26px, 4.6vw, 38px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }

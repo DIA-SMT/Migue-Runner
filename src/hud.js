@@ -45,7 +45,7 @@ export function crearHud() {
       juegoHud.classList.add('oculto');
       pregunta.classList.add('oculto');
       feedback.classList.add('oculto');
-      $('#resultado-puntaje').textContent = String(datos.puntaje);
+      $('#resultado-puntaje').textContent = String(Math.floor(datos.puntaje));
       $('#resultado-aciertos').textContent = `${datos.aciertos} / ${datos.totalPreguntas}`;
       $('#resultado-distancia').textContent = `${Math.round(datos.distancia)} m`;
       $('#resultado-tiempo').textContent = `${Math.round(datos.tiempo)} s`;
