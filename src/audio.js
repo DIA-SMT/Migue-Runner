@@ -52,6 +52,17 @@ export function crearAudio() {
       }
     },
 
+    // Sol juntado: blip agudo y muy corto. Suena seguido, así que va más
+    // bajo que el resto para no saturar.
+    sol() {
+      try {
+        nota(1175, 0, 0.05, 'triangle');
+        nota(1568, 0.04, 0.07, 'triangle');
+      } catch {
+        /* sin audio, sin drama */
+      }
+    },
+
     // Golpe o respuesta incorrecta: descenso seco.
     golpe() {
       try {

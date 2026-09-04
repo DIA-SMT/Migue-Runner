@@ -14,6 +14,9 @@ const PANEL_ANCHO = 3.6;
 const PANEL_ALTO = 1.15;
 const Y_ARRIBA = 2.3;
 const Y_ABAJO = 0.72;
+// Z en la que el portal ya cruzado se retira: por delante de la cámara
+// (CAMARA.POSICION.z ≈ 4.2) para que nunca la atraviese.
+const PORTAL_Z_RETIRO = 1.4;
 
 function crearPanel() {
   const lienzo = document.createElement('canvas');
@@ -115,7 +118,10 @@ export function crearPortal(escena) {
         return { pregunta, eleccion };
       }
 
-      if (grupo.position.z > 10) {
+      // Se retira apenas quedó atrás del jugador. La cámara está en z≈4.2:
+      // si el portal siguiera avanzando, la atravesaría y sus dos paneles
+      // taparían toda la pantalla justo cuando hay que leer el resultado.
+      if (grupo.position.z > PORTAL_Z_RETIRO) {
         activo = false;
         grupo.visible = false;
       }

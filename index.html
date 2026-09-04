@@ -14,6 +14,7 @@
       <div id="hud-vidas" class="hud-placa"></div>
       <div class="hud-derecha">
         <div id="hud-puntaje" class="hud-placa">0</div>
+        <div id="hud-soles" class="hud-soles">☀ 0</div>
         <div id="hud-racha" class="hud-racha"></div>
       </div>
       <div id="hud-pregunta" class="oculto"></div>
@@ -28,6 +29,7 @@
         <p>Una carrera por Tucumán</p>
       </header>
       <footer class="atraccion-pie">
+        <p id="atraccion-record" class="atraccion-record"></p>
         <p class="atraccion-prompt">ELEGÍ TU PERSONAJE</p>
         <div class="atraccion-controles">
           <span>
@@ -41,22 +43,43 @@
             <small class="hint-tactil">(tocá abajo)</small>
           </span>
         </div>
+        <p class="atraccion-ayuda hint-teclado">
+          Juntá los ☀ soles de la ciudad · <b>C</b> calibrar puntero · <b>F</b> pantalla completa
+        </p>
+        <p class="atraccion-ayuda hint-tactil">Juntá los ☀ soles de la ciudad</p>
       </footer>
     </div>
 
     <!-- Pantalla de resultado -->
     <div id="pantalla-resultado" class="oculto">
       <div class="resultado-placa">
-        <h2>¡Fin de la carrera!</h2>
+        <h2 id="resultado-mensaje">¡Fin de la carrera!</h2>
         <p class="resultado-grande" id="resultado-puntaje">0</p>
+        <p id="resultado-record" class="resultado-record"></p>
         <dl class="resultado-stats">
           <div><dt>Trivia</dt><dd id="resultado-aciertos">0 / 0</dd></div>
+          <div><dt>Soles</dt><dd id="resultado-soles">0</dd></div>
           <div><dt>Distancia</dt><dd id="resultado-distancia">0 m</dd></div>
           <div><dt>Tiempo</dt><dd id="resultado-tiempo">0 s</dd></div>
         </dl>
         <p class="resultado-pie">Apretá un botón para volver a jugar</p>
       </div>
     </div>
+
+    <!-- Pantalla de calibración del puntero (Fase 2) -->
+    <div id="pantalla-calibracion" class="oculto">
+      <div class="calibracion-placa">
+        <p id="calibracion-paso" class="calibracion-paso"></p>
+        <p id="calibracion-icono" class="calibracion-icono"></p>
+        <h2 id="calibracion-titulo"></h2>
+        <p id="calibracion-capturado" class="calibracion-capturado"></p>
+        <p id="calibracion-aviso" class="calibracion-aviso"></p>
+        <p class="calibracion-pie">Escape para cancelar</p>
+      </div>
+    </div>
+
+    <!-- Destello rojo al recibir un golpe -->
+    <div id="flash-dano"></div>
 
     <p id="cargando" class="hud-cargando">Cargando a Migue…</p>
 

@@ -1,24 +1,40 @@
 // main.js — bootstrap y orquestación del juego.
 //
-// Estados: ATRACCION (espera con Migue en idle) → JUGANDO (carrera con
-// obstáculos y trivia) → RESULTADO (puntaje, vuelve solo a los 15 s).
-// La calibración del puntero (Fase 2) se suma cuando esté el dispositivo;
-// mientras tanto: Espacio/⬆ salta, Shift/⬇ agacha.
+// Estados: ATRACCION (espera, los dos personajes en idle) → JUGANDO (carrera
+// con obstáculos, soles y trivia) → RESULTADO (puntaje y récord, vuelve solo
+// a los 15 s). La calibración del puntero (Fase 2) se abre a mano con la
+// tecla C o manteniendo los dos botones 3 segundos.
 
 import * as THREE from 'three';
 import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { PALETA, MUNDO, CAMARA, LUCES, POST, RENDER, JUEGO, TRIVIA, OBSTACULOS, FRASES } from './config.js';
+import {
+  PALETA,
+  MUNDO,
+  CAMARA,
+  LUCES,
+  POST,
+  RENDER,
+  JUEGO,
+  TRIVIA,
+  OBSTACULOS,
+  FRASES,
+  COLECCIONABLES,
+  JUICE,
+} from './config.js';
 import { crearMundo } from './world.js';
 import { crearPersonajes } from './player.js';
 import { crearEntrada } from './input.js';
 import { crearAudio } from './audio.js';
 import { crearObstaculos } from './obstaculos.js';
+import { crearColeccionables } from './coleccionables.js';
+import { crearParticulas } from './particulas.js';
 import { crearPortal } from './portals.js';
 import { cargarPreguntas } from './quiz.js';
 import { crearHud } from './hud.js';
+import { crearCalibracion } from './calibracion.js';
 import { crearEstados } from './states.js';
 
 // ---------------------------------------------------------------------------
@@ -77,11 +93,30 @@ composer.addPass(new OutputPass());
 // Contenido y sistemas
 // ---------------------------------------------------------------------------
 const mundo = crearMundo(escena);
-const entrada = crearEntrada();
 const hud = crearHud();
 const audio = crearAudio();
 const obstaculos = crearObstaculos(escena);
+const particulas = crearParticulas(escena);
 const portal = crearPortal(escena);
+
+// La calibración se adueña de la entrada mientras está abierta. Se declara
+// antes de crearla para poder pasarle la consulta a la entrada.
+let calibracion = null;
+const entrada = crearEntrada({ bloqueado: () => calibracion?.estaActiva() ?? false });
+
+calibracion = crearCalibracion({
+  // Al terminar de calibrar, la entrada toma los códigos nuevos en caliente.
+  alGuardar(capturas) {
+    entrada.recargarMapa();
+    console.info('Puntero calibrado:', capturas);
+  },
+});
+
+// Los soles no aparecen encima de un obstáculo: un arco a la altura del
+// salto dentro de un cartel colgante sería una trampa, no un desafío.
+const coleccionables = crearColeccionables(escena, {
+  zonaOcupada: (z, margen) => obstaculos.hayCerca(z, margen),
+});
 
 let jugador = null;
 crearPersonajes(escena).then((resultado) => {
@@ -95,6 +130,26 @@ cargarPreguntas().then((resultado) => {
 });
 
 // ---------------------------------------------------------------------------
+// Récord local. No es ranking online: es el mejor puntaje de esta máquina,
+// para que la gente del stand compita entre sí.
+// ---------------------------------------------------------------------------
+function leerRecord() {
+  try {
+    return Number(localStorage.getItem(JUEGO.CLAVE_RECORD)) || 0;
+  } catch {
+    return 0; // localStorage bloqueado (modo privado): se juega sin récord
+  }
+}
+
+function guardarRecord(valor) {
+  try {
+    localStorage.setItem(JUEGO.CLAVE_RECORD, String(valor));
+  } catch {
+    // Sin persistencia: no es motivo para romper la partida.
+  }
+}
+
+// ---------------------------------------------------------------------------
 // Estado de la partida
 // ---------------------------------------------------------------------------
 const partida = {
@@ -104,6 +159,7 @@ const partida = {
   racha: 0,
   aciertos: 0,
   totalPreguntas: 0,
+  soles: 0,
   distancia: 0,
   tiempo: 0,
   invulnerable: 0, // segundos restantes de invulnerabilidad tras un golpe
@@ -111,18 +167,32 @@ const partida = {
   feedbackTimer: 0,
   esquivados: 0, // obstáculos superados (para los festejos)
   proximoFestejo: FRASES.CADA_ESQUIVADOS,
+  recordAnterior: 0,
+  esRecord: false,
 };
+
+// Sacudida de cámara: se pide con `sacudir()` y se apaga sola.
+let sacudida = 0;
+function sacudir(intensidad) {
+  sacudida = Math.max(sacudida, intensidad);
+}
 
 function fraseAlAzar() {
   return FRASES.LISTA[Math.floor(Math.random() * FRASES.LISTA.length)];
 }
+
+// Altura aproximada del torso del personaje, para nacer las partículas ahí.
+const ALTURA_IMPACTO = 0.9;
 
 function perderVida() {
   if (partida.invulnerable > 0) return;
   partida.vidas--;
   partida.invulnerable = OBSTACULOS.INVULNERABLE_S;
   hud.actualizarVidas(partida.vidas);
+  hud.destellarDano();
   audio.golpe();
+  sacudir(JUICE.SACUDIDA_GOLPE);
+  particulas.estallar(0, ALTURA_IMPACTO, 0, JUICE.PARTICULAS_GOLPE, PALETA.VALLA_NARANJA, 2);
   if (partida.vidas <= 0) estados.cambiar('RESULTADO');
 }
 
@@ -141,6 +211,8 @@ function resolverCruce(cruce) {
     hud.mostrarFeedback('ok', '¡Correcto!', pregunta.dato ?? '');
     hud.mostrarFrase(fraseAlAzar());
     audio.acierto();
+    sacudir(JUICE.SACUDIDA_ACIERTO);
+    particulas.estallar(0, ALTURA_IMPACTO, 0, JUICE.PARTICULAS_GOLPE, PALETA.SOL, 1);
   } else {
     partida.racha = 0;
     const correcta = pregunta.correcta === 'arriba' ? pregunta.opcionArriba : pregunta.opcionAbajo;
@@ -164,10 +236,13 @@ const estados = crearEstados({
   ATRACCION: {
     entrar() {
       hud.mostrarAtraccion();
+      hud.actualizarRecordAtraccion(leerRecord());
       jugador?.reiniciar();
       jugador?.modoAtraccion(); // Migue y Chanbachi, lado a lado
       portal.descartar();
       obstaculos.reiniciar();
+      coleccionables.reiniciar();
+      particulas.limpiar();
     },
     actualizar(dt) {
       mundo.actualizar(dt, MUNDO.VELOCIDAD_ATRACCION);
@@ -184,6 +259,7 @@ const estados = crearEstados({
         racha: 0,
         aciertos: 0,
         totalPreguntas: 0,
+        soles: 0,
         distancia: 0,
         tiempo: 0,
         invulnerable: 0,
@@ -191,12 +267,17 @@ const estados = crearEstados({
         feedbackTimer: 0,
         esquivados: 0,
         proximoFestejo: FRASES.CADA_ESQUIVADOS,
+        recordAnterior: leerRecord(),
+        esRecord: false,
       });
       jugador?.reiniciar();
       obstaculos.reiniciar(true);
+      coleccionables.reiniciar();
+      particulas.limpiar();
       portal.descartar();
       hud.mostrarJuego();
       hud.actualizarVidas(partida.vidas);
+      hud.actualizarSoles(0);
       hud.actualizarRacha(0);
       audio.iniciarMusica(); // hay gesto del usuario: el autoplay no molesta
     },
@@ -209,6 +290,7 @@ const estados = crearEstados({
 
       mundo.actualizar(dt, partida.velocidad);
       jugador?.actualizar(dt, 'correr', partida.velocidad);
+      particulas.actualizar(dt, partida.velocidad);
 
       // Invulnerabilidad post-golpe: parpadeo
       if (partida.invulnerable > 0) {
@@ -217,8 +299,8 @@ const estados = crearEstados({
         if (partida.invulnerable <= 0 && jugador) jugador.objeto.visible = true;
       }
 
-      // Obstáculos
       if (jugador) {
+        // Obstáculos
         const eventos = obstaculos.actualizar(dt, partida.velocidad, jugador);
         if (eventos.colision) perderVida();
         partida.esquivados += eventos.esquivados;
@@ -227,6 +309,23 @@ const estados = crearEstados({
           partida.proximoFestejo += FRASES.CADA_ESQUIVADOS;
           hud.mostrarFrase(fraseAlAzar());
           audio.festejo();
+        }
+
+        // Soles de la ciudad
+        const juntados = coleccionables.actualizar(dt, partida.velocidad, jugador);
+        if (juntados > 0) {
+          partida.soles += juntados;
+          partida.puntaje += juntados * COLECCIONABLES.VALOR;
+          hud.actualizarSoles(partida.soles, true);
+          audio.sol();
+          particulas.estallar(
+            0,
+            ALTURA_IMPACTO,
+            0,
+            JUICE.PARTICULAS_SOL * juntados,
+            PALETA.SOL,
+            1,
+          );
         }
       }
 
@@ -239,6 +338,9 @@ const estados = crearEstados({
         portal.lanzar(pregunta, distanciaPortal);
         obstaculos.suprimir(TRIVIA.AVISO_S + TRIVIA.SUPRESION_OBSTACULOS_S);
         obstaculos.despejarCerca(-distanciaPortal, partida.velocidad * 1.5);
+        // Los soles tampoco: el portal necesita la pista despejada para que
+        // la elección de respuesta sea la única cosa que importe ahí.
+        coleccionables.despejarCerca(-distanciaPortal, partida.velocidad * 1.5);
         partida.proximaTrivia = TRIVIA.INTERVALO_S;
       }
 
@@ -265,12 +367,19 @@ const estados = crearEstados({
     entrar() {
       resultadoTemporizador = JUEGO.RESULTADO_VOLVER_S;
       resultadoBloqueo = JUEGO.RESULTADO_BLOQUEO_S;
+
+      // ¿Récord nuevo? Se compara contra el valor leído al empezar.
+      const puntajeFinal = Math.floor(partida.puntaje);
+      partida.esRecord = puntajeFinal > partida.recordAnterior;
+      if (partida.esRecord) guardarRecord(puntajeFinal);
+
       hud.mostrarResultado(partida);
       portal.descartar();
     },
     actualizar(dt) {
       mundo.actualizar(dt, MUNDO.VELOCIDAD_ATRACCION);
       jugador?.actualizar(dt, 'idle');
+      particulas.actualizar(dt, MUNDO.VELOCIDAD_ATRACCION);
       resultadoBloqueo -= dt;
       resultadoTemporizador -= dt;
       // Vuelve solo a la atracción: stand desatendido.
@@ -289,6 +398,7 @@ let resultadoBloqueo = 0;
 // En la atracción, los dos botones eligen personaje y arrancan la partida:
 // saltar = Migue, agacharse = Chanbachi (dos botones, dos personajes).
 entrada.on('saltar', () => {
+  if (calibracion.estaActiva()) return;
   if (estados.actual === 'JUGANDO') {
     jugador?.saltar();
   } else if (estados.actual === 'ATRACCION' && jugador) {
@@ -297,6 +407,7 @@ entrada.on('saltar', () => {
   }
 });
 entrada.on('agacharse', () => {
+  if (calibracion.estaActiva()) return;
   if (estados.actual === 'JUGANDO') {
     jugador?.agacharse(true);
   } else if (estados.actual === 'ATRACCION' && jugador) {
@@ -308,23 +419,65 @@ entrada.on('soltarAgacharse', () => {
   jugador?.agacharse(false);
 });
 entrada.on('cualquiera', () => {
+  if (calibracion.estaActiva()) return;
   // Tras un breve bloqueo (para no saltear el puntaje sin querer),
   // cualquier botón vuelve a la selección de personaje.
   if (estados.actual === 'RESULTADO' && resultadoBloqueo <= 0) {
     estados.cambiar('ATRACCION');
   }
 });
+entrada.on('calibrar', () => {
+  // Calibrar es una acción de montaje, no de partida: si había una en curso
+  // se vuelve a la espera, así nadie pierde vidas mirando la calibración.
+  if (estados.actual === 'JUGANDO') estados.cambiar('ATRACCION');
+  calibracion.iniciar();
+});
 
 estados.cambiar('ATRACCION');
+
+// ---------------------------------------------------------------------------
+// Pantalla completa (pulido de stand): tecla F. No se fuerza sola porque
+// el navegador la rechaza sin gesto del usuario y sorprendería a quien
+// entre desde el celular.
+// ---------------------------------------------------------------------------
+window.addEventListener('keydown', (evento) => {
+  if (evento.code !== 'KeyF' || evento.repeat) return;
+  evento.preventDefault();
+  if (document.fullscreenElement) {
+    document.exitFullscreen().catch(() => {});
+  } else {
+    document.documentElement.requestFullscreen().catch(() => {});
+  }
+});
 
 // ---------------------------------------------------------------------------
 // Bucle principal
 // ---------------------------------------------------------------------------
 const reloj = new THREE.Clock();
+let tiempoTotal = 0;
+
+function aplicarSacudida(dt) {
+  // Decaimiento exponencial: el temblor arranca fuerte y se apaga solo.
+  sacudida *= Math.exp(-JUICE.SACUDIDA_AMORTIGUACION * dt);
+  if (sacudida < 0.001) {
+    sacudida = 0;
+    camara.position.set(CAMARA.POSICION.x, CAMARA.POSICION.y, CAMARA.POSICION.z);
+  } else {
+    const fase = tiempoTotal * JUICE.SACUDIDA_FRECUENCIA;
+    camara.position.set(
+      CAMARA.POSICION.x + Math.sin(fase * 1.7) * sacudida,
+      CAMARA.POSICION.y + Math.cos(fase * 2.3) * sacudida,
+      CAMARA.POSICION.z,
+    );
+  }
+  camara.lookAt(CAMARA.MIRA.x, CAMARA.MIRA.y, CAMARA.MIRA.z);
+}
 
 function cuadro() {
   const dt = Math.min(reloj.getDelta(), 0.05);
+  tiempoTotal += dt;
   estados.actualizar(dt);
+  aplicarSacudida(dt);
   composer.render();
   requestAnimationFrame(cuadro);
 }

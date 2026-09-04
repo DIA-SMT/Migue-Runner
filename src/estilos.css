@@ -107,6 +107,22 @@ body {
   color: var(--smt-dorado);
 }
 
+/* Contador de soles juntados, debajo del puntaje */
+.hud-soles {
+  margin-top: 0.25em;
+  font-size: 36px;
+  font-weight: 800;
+  color: var(--smt-dorado);
+  font-variant-numeric: tabular-nums;
+  text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
+  transition: transform 0.12s ease;
+}
+
+/* Se agranda un instante cuando entra un sol (lo aplica hud.js) */
+.hud-soles.pop {
+  transform: scale(1.25);
+}
+
 .hud-racha {
   margin-top: 0.3em;
   font-size: 32px;
@@ -287,6 +303,131 @@ body {
   color: var(--smt-dorado);
 }
 
+/* Récord de la máquina y línea de ayuda, en la pantalla de espera */
+.atraccion-record {
+  display: table;
+  margin: 0 auto 0.6em;
+  font-size: clamp(24px, 2.6vw, 34px);
+  font-weight: 700;
+  color: var(--smt-dorado);
+  background: color-mix(in srgb, var(--smt-azul-hondo) 82%, transparent);
+  padding: 0.2em 0.7em;
+  border-radius: 0.3em;
+  min-height: 1.4em;
+}
+
+.atraccion-record:empty {
+  display: none;
+}
+
+.atraccion-ayuda {
+  display: table;
+  margin: 0.8em auto 0;
+  font-size: clamp(20px, 2vw, 26px);
+  font-weight: 500;
+  color: var(--smt-blanco);
+  background: color-mix(in srgb, var(--smt-azul-hondo) 72%, transparent);
+  padding: 0.25em 0.8em;
+  border-radius: 0.3em;
+}
+
+:root.es-tactil .atraccion-ayuda.hint-tactil {
+  display: table;
+}
+
+.atraccion-ayuda b {
+  color: var(--smt-dorado);
+}
+
+/* ---------- Destello de daño ---------- */
+/* Viñeta roja en los bordes: se lee incluso mirando el centro de la pista,
+   y no tapa los obstáculos como lo haría un velo a pantalla completa. */
+#flash-dano {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  opacity: 0;
+  background: radial-gradient(
+    ellipse at center,
+    transparent 45%,
+    color-mix(in srgb, var(--error) 85%, transparent) 100%
+  );
+}
+
+#flash-dano.animar {
+  animation: flash-dano 0.45s ease-out;
+}
+
+@keyframes flash-dano {
+  0% { opacity: 0.95; }
+  100% { opacity: 0; }
+}
+
+/* ---------- Pantalla de calibración del puntero (Fase 2) ---------- */
+
+#pantalla-calibracion {
+  position: fixed;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: color-mix(in srgb, var(--smt-azul-hondo) 88%, transparent);
+  z-index: 10;
+}
+
+.calibracion-placa {
+  text-align: center;
+  max-width: min(92vw, 30em);
+  padding: 1.2em 1.6em;
+  border-radius: 0.5em;
+  background: var(--smt-azul);
+  border-bottom: 8px solid var(--smt-dorado);
+}
+
+.calibracion-paso {
+  font-size: 32px;
+  font-weight: 700;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--smt-celeste);
+}
+
+.calibracion-icono {
+  font-size: clamp(56px, 9vw, 96px);
+  line-height: 1.1;
+  color: var(--smt-dorado);
+}
+
+.calibracion-placa h2 {
+  font-size: clamp(32px, 4vw, 48px);
+  font-weight: 800;
+  line-height: 1.2;
+}
+
+/* El código capturado, grande y monoespaciado para leerlo desde lejos */
+.calibracion-capturado {
+  margin-top: 0.5em;
+  min-height: 1.4em;
+  font-size: clamp(32px, 4.5vw, 54px);
+  font-weight: 800;
+  font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
+  color: var(--smt-dorado);
+  overflow-wrap: anywhere;
+}
+
+.calibracion-aviso {
+  min-height: 1.4em;
+  font-size: 32px;
+  font-weight: 700;
+  color: #e8968e;
+}
+
+.calibracion-pie {
+  margin-top: 0.8em;
+  font-size: 24px;
+  color: var(--smt-celeste);
+}
+
 /* Dos hints por acción: uno para teclado/puntero, otro para pantalla
    táctil. input.js marca <html class="es-tactil"> según el dispositivo. */
 .hint-tactil {
@@ -377,6 +518,24 @@ body {
   font-size: clamp(26px, 4.6vw, 38px);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
+}
+
+/* Línea de récord: "¡Récord nuevo!" o el mejor puntaje a superar */
+.resultado-record {
+  font-size: clamp(24px, 3vw, 34px);
+  font-weight: 700;
+  color: var(--smt-celeste);
+  min-height: 1.3em;
+}
+
+.resultado-record.nuevo {
+  color: var(--smt-azul-hondo);
+  background: var(--smt-dorado);
+  border-radius: 0.25em;
+  padding: 0.1em 0.5em;
+  display: table;
+  margin: 0.2em auto 0;
+  animation: pulso 1.2s ease-in-out infinite;
 }
 
 .resultado-pie {

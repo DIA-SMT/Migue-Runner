@@ -25,6 +25,15 @@ export const DIAGNOSTICO = {
   MAX_EVENTOS_HISTORIAL: 12,
 };
 
+export const CALIBRACION = {
+  // Códigos que NO se aceptan como botón del juego: son teclas de sistema
+  // o del navegador que romperían la experiencia del stand si se mapean.
+  CODIGOS_PROHIBIDOS: ['F5', 'F11', 'F12', 'Escape', 'Tab', 'MetaLeft', 'MetaRight'],
+  // Tras capturar un botón, se ignora todo por este lapso: los punteros
+  // sueltan varios eventos por pulsación y ambos pasos se saltearían solos.
+  PAUSA_ENTRE_PASOS_MS: 700,
+};
+
 // ---------------------------------------------------------------------------
 // Paleta (espejo de los tokens CSS + colores del centro urbano, en hexa).
 // ⚠️ Propuesta de trabajo: validar contra el manual de marca antes de producción.
@@ -201,6 +210,73 @@ export const JUEGO = {
   PUNTOS_POR_METRO: 1,
   RESULTADO_VOLVER_S: 15, // vuelve solo a la atracción (stand desatendido)
   RESULTADO_BLOQUEO_S: 1.2, // ignora botones apenas termina (evita saltearla sin querer)
+
+  // Récord local (localStorage). No es ranking online: es el mejor puntaje
+  // de esta máquina, para que la gente del stand compita entre sí.
+  CLAVE_RECORD: 'migue.record',
+
+  // Mensajes de cierre según puntaje (de mayor a menor; se toma el primero
+  // que alcance el umbral).
+  MENSAJES: [
+    { desde: 1500, texto: '¡Sos leyenda tucumana!' },
+    { desde: 900, texto: '¡Alto nivel, che!' },
+    { desde: 500, texto: '¡Muy bien, chango!' },
+    { desde: 200, texto: '¡Se puede más!' },
+    { desde: 0, texto: '¡Dale que vos podés!' },
+  ],
+};
+
+export const COLECCIONABLES = {
+  // Soles de la ciudad (guiño al sol del isologo municipal): suman puntos
+  // y le dan sentido al salto más allá de esquivar.
+  VALOR: 20,
+  RADIO: 0.26, // radio visual del sol
+  RADIO_TOMA: 0.75, // radio de captura, generoso a propósito
+  GIRO: 2.4, // vueltas por segundo sobre su eje
+  POOL: 48, // instancias totales (nunca se crean en caliente)
+
+  Z_SPAWN: -170,
+  // Se retiran justo detrás del jugador: la cámara está en z≈4.2 y un sol
+  // sin juntar que la atraviese es un fogonazo dorado en toda la pantalla.
+  Z_FUERA: 1.8,
+  INTERVALO_MIN_S: 2.4, // separación temporal entre grupos
+  INTERVALO_MAX_S: 4.2,
+
+  // Grupo en arco: hay que saltar para juntarlo (premia el timing).
+  // El arco entero mide CANTIDAD × SEPARACION = 6 unidades, y un salto cubre
+  // entre 5 y 9 según la velocidad: entra justo.
+  ARCO_CANTIDAD: 5,
+  ARCO_SEPARACION: 1.5, // separación en Z entre soles del arco
+  // OJO con la altura del pico: la hitbox de pie llega a JUGADOR.HITBOX.ALTO
+  // (1.5), así que el pico tiene que quedar por encima de 1.5 + RADIO o el
+  // arco se junta corriendo y el salto deja de tener sentido. En el pico del
+  // salto la hitbox llega a ~2.37, así que 2.15 es alcanzable saltando.
+  ARCO_ALTURA: 2.15, // altura del sol del medio: exige salto
+  ARCO_BASE: 0.8, // altura de los soles de las puntas: gratis, corriendo
+
+  // Grupo en línea baja: se junta corriendo, pero se pierde si vas agachado.
+  LINEA_CANTIDAD: 4,
+  LINEA_SEPARACION: 1.6,
+  LINEA_ALTURA: 1.05,
+
+  PROBABILIDAD_ARCO: 0.55, // el resto son líneas bajas
+};
+
+export const JUICE = {
+  // Sacudida de cámara: golpe fuerte, acierto apenas perceptible.
+  SACUDIDA_GOLPE: 0.32,
+  SACUDIDA_ACIERTO: 0.06,
+  SACUDIDA_AMORTIGUACION: 6.5, // qué tan rápido se apaga el temblor
+  SACUDIDA_FRECUENCIA: 38, // vibración por segundo
+
+  // Partículas: chispas de colores planos, sin texturas.
+  PARTICULAS_POOL: 64,
+  PARTICULAS_GOLPE: 16,
+  PARTICULAS_SOL: 8,
+  PARTICULA_VIDA_S: 0.65,
+  PARTICULA_TAMANO: 0.13,
+  PARTICULA_VELOCIDAD: 4.2,
+  PARTICULA_GRAVEDAD: 9,
 };
 
 export const AUDIO = {

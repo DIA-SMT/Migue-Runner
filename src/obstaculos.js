@@ -121,6 +121,12 @@ export function crearObstaculos(escena) {
       supresion = 0;
     },
 
+    // ¿Hay algún obstáculo activo cerca de esta z? Lo consultan los soles
+    // para no aparecer encima de un cartel o una valla.
+    hayCerca(zCentro, margen) {
+      return pool.some((o) => o.activo && Math.abs(o.malla.position.z - zCentro) < margen);
+    },
+
     // Desactiva los obstáculos que cruzarían demasiado cerca del portal de
     // trivia (el salto/agachada del portal no puede competir con una valla).
     despejarCerca(zCentro, margen) {
