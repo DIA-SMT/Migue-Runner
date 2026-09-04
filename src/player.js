@@ -1,38 +1,38 @@
-// player.js — Migue: carga del modelo, salto, agachada e hitbox.
+// player.js — los personajes jugables: Migue y Chanbachi (el perrobot
+// municipal). Salto, agachada, hitbox y animación procedural.
 //
-// El .glb optimizado no trae animaciones ni esqueleto, así que la carrera se
-// simula con bobbing procedural y la agachada con un achatamiento de escala
-// (plan B previsto en el documento de contexto).
+// Los .glb no traen animaciones ni esqueleto, así que la carrera se simula:
+// zancada con rebote y balanceo cuya frecuencia escala con la velocidad,
+// cabeceo sutil, squash & stretch en salto y aterrizaje, y una agachada con
+// ensanche e inclinación de barrida (plan B previsto en el documento).
 //
-// La hitbox es una caja propia más chica que el modelo: perdonar al jugador
-// se siente mejor que castigarlo.
+// La hitbox es una caja propia idéntica para ambos personajes (elegir es
+// gusto, no ventaja) y más chica que el modelo: perdonar se siente mejor.
 
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
 import { JUGADOR, SALTO, AGACHADA } from './config.js';
 
-// Placeholder por si el .glb no carga (nunca romper la escena por un asset).
-function crearPlaceholder() {
-  const geometria = new THREE.CapsuleGeometry(0.35, JUGADOR.ALTURA - 0.7, 4, 8);
+// Placeholder por si un .glb no carga (nunca romper la escena por un asset).
+function crearPlaceholder(altura) {
+  const geometria = new THREE.CapsuleGeometry(0.35, altura - 0.7, 4, 8);
   const material = new THREE.MeshStandardMaterial({ color: 0x2277cc, roughness: 1 });
   const capsula = new THREE.Mesh(geometria, material);
-  capsula.position.y = JUGADOR.ALTURA / 2;
+  capsula.position.y = altura / 2;
   capsula.castShadow = true;
   const grupo = new THREE.Group();
   grupo.add(capsula);
   return grupo;
 }
 
-async function cargarModelo() {
+async function cargarModelo(archivo, altura) {
   const loader = new GLTFLoader();
   loader.setMeshoptDecoder(MeshoptDecoder);
-  const gltf = await loader.loadAsync('models/migue.glb');
+  const gltf = await loader.loadAsync(archivo);
 
   if (gltf.animations.length > 0) {
-    console.info('migue.glb trae animaciones:', gltf.animations.map((a) => a.name));
-  } else {
-    console.info('migue.glb sin animaciones: se usa bobbing procedural.');
+    console.info(`${archivo} trae animaciones:`, gltf.animations.map((a) => a.name));
   }
 
   const modelo = gltf.scene;
@@ -40,12 +40,11 @@ async function cargarModelo() {
   // Escalar a la altura objetivo y apoyar los pies en y=0.
   const caja = new THREE.Box3().setFromObject(modelo);
   const tamano = caja.getSize(new THREE.Vector3());
-  const escala = JUGADOR.ALTURA / tamano.y;
-  modelo.scale.setScalar(escala);
+  modelo.scale.setScalar(altura / tamano.y);
   caja.setFromObject(modelo);
   modelo.position.y -= caja.min.y;
 
-  // El modelo mira a +Z; la carrera va hacia -Z.
+  // Los modelos miran a +Z; la carrera va hacia -Z.
   modelo.rotation.y = Math.PI;
 
   modelo.traverse((nodo) => {
@@ -58,38 +57,69 @@ async function cargarModelo() {
   return modelo;
 }
 
-export async function crearMigue(escena) {
-  let modelo;
-  try {
-    modelo = await cargarModelo();
-  } catch (error) {
-    console.error('No se pudo cargar models/migue.glb; se usa placeholder.', error);
-    modelo = crearPlaceholder();
-  }
+export async function crearPersonajes(escena) {
+  const [migue, chanbachi] = await Promise.all([
+    cargarModelo('models/migue.glb', JUGADOR.ALTURA_MIGUE).catch((e) => {
+      console.error('No se pudo cargar migue.glb; se usa placeholder.', e);
+      return crearPlaceholder(JUGADOR.ALTURA_MIGUE);
+    }),
+    cargarModelo('models/chanbachi.glb', JUGADOR.ALTURA_CHANBACHI).catch((e) => {
+      console.error('No se pudo cargar chanbachi.glb; se usa placeholder.', e);
+      return crearPlaceholder(JUGADOR.ALTURA_CHANBACHI);
+    }),
+  ]);
 
-  // contenedor: recibe la escala de la agachada (el modelo interno queda intacto).
-  // raiz: recibe salto + bobbing + balanceo.
+  // contenedor: recibe squash & stretch y la escala de la agachada.
+  // raiz: recibe salto + bobbing + balanceo + inclinación.
   const contenedor = new THREE.Group();
-  contenedor.add(modelo);
+  contenedor.add(migue, chanbachi);
   const raiz = new THREE.Group();
   raiz.add(contenedor);
   raiz.rotation.x = JUGADOR.INCLINACION;
   escena.add(raiz);
 
+  const modelos = { migue, chanbachi };
+  let elegido = 'migue';
+
   // ----- Estado físico -----
-  let saltoY = 0; // altura del salto (sin contar el bobbing)
+  let saltoY = 0;
   let velocidadY = 0;
-  let agachadoDeseado = false; // el botón está apretado
-  let agachadoDesde = -Infinity; // reloj interno de la agachada (mínimo 0.4 s)
+  let agachadoDeseado = false;
+  let agachadoDesde = -Infinity;
   let relojInterno = 0;
   let tiempoBob = 0;
+  let squashRestante = 0; // temporizador del aplastamiento de aterrizaje
 
   const enAire = () => saltoY > 0.001 || velocidadY > 0;
   const agachadoActivo = () =>
     !enAire() && (agachadoDeseado || relojInterno - agachadoDesde < AGACHADA.MIN_S);
 
+  // En la pantalla de atracción se muestran los dos, lado a lado.
+  function modoAtraccion() {
+    migue.visible = true;
+    chanbachi.visible = true;
+    migue.position.x = -0.75;
+    chanbachi.position.x = 0.75;
+  }
+
+  function modoJuego() {
+    for (const nombre of Object.keys(modelos)) {
+      modelos[nombre].visible = nombre === elegido;
+      modelos[nombre].position.x = 0;
+    }
+  }
+
+  modoAtraccion();
+
   return {
     objeto: raiz,
+
+    // 'migue' | 'chanbachi'
+    seleccionar(nombre) {
+      if (modelos[nombre]) elegido = nombre;
+    },
+    elegido: () => elegido,
+    modoAtraccion,
 
     saltar() {
       if (enAire() || agachadoActivo()) return false;
@@ -97,8 +127,6 @@ export async function crearMigue(escena) {
       return true;
     },
 
-    // Se llama con true al apretar y false al soltar; el mínimo de 0.4 s
-    // se garantiza internamente.
     agacharse(apretado) {
       if (apretado && !enAire()) {
         agachadoDeseado = true;
@@ -111,7 +139,6 @@ export async function crearMigue(escena) {
     enAire,
     estaAgachado: agachadoActivo,
 
-    // Alto actual de la hitbox y base (para el AABB de colisiones).
     hitbox() {
       return {
         yMin: saltoY,
@@ -125,48 +152,78 @@ export async function crearMigue(escena) {
       velocidadY = 0;
       agachadoDeseado = false;
       agachadoDesde = -Infinity;
-      contenedor.scale.y = 1;
+      squashRestante = 0;
+      contenedor.scale.set(1, 1, 1);
       raiz.position.y = 0;
+      raiz.rotation.set(JUGADOR.INCLINACION, 0, 0);
       raiz.visible = true;
+      modoJuego();
     },
 
-    // modo: 'correr' (partida) o 'idle' (pantalla de atracción)
-    actualizar(dt, modo = 'correr') {
+    // modo: 'correr' (partida) o 'idle' (atracción); velocidad escala el paso.
+    actualizar(dt, modo = 'correr', velocidad = 8) {
       relojInterno += dt;
 
-      // Física del salto
-      if (enAire()) {
+      // ---- Física del salto ----
+      const estabaEnAire = enAire();
+      if (estabaEnAire) {
         velocidadY -= SALTO.GRAVEDAD * dt;
         saltoY += velocidadY * dt;
         if (saltoY <= 0) {
           saltoY = 0;
           velocidadY = 0;
+          squashRestante = JUGADOR.ATERRIZAJE_S; // ¡tocó el suelo!
         }
       }
+      if (squashRestante > 0) squashRestante -= dt;
 
-      // Agachada: interpolar la escala del contenedor
-      const escalaObjetivo = agachadoActivo() ? AGACHADA.ESCALA_Y : 1;
-      contenedor.scale.y +=
-        (escalaObjetivo - contenedor.scale.y) * Math.min(1, AGACHADA.VELOCIDAD_TRANSICION * dt);
+      // ---- Pose objetivo (escala e inclinación) ----
+      const agachado = agachadoActivo();
+      let escalaYObjetivo = 1;
+      let escalaXZObjetivo = 1;
+      let inclinacionObjetivo = JUGADOR.INCLINACION;
 
-      // Bobbing (solo con los pies en el suelo)
+      if (agachado) {
+        escalaYObjetivo = AGACHADA.ESCALA_Y;
+        escalaXZObjetivo = AGACHADA.ENSANCHE;
+        inclinacionObjetivo = JUGADOR.INCLINACION + AGACHADA.INCLINACION_EXTRA;
+      } else if (enAire()) {
+        // Estirado subiendo, neutro cayendo; lean según velocidad vertical.
+        escalaYObjetivo = velocidadY > 0 ? JUGADOR.SALTO_ESTIRAMIENTO : 1;
+        escalaXZObjetivo = velocidadY > 0 ? 0.96 : 1;
+        inclinacionObjetivo = JUGADOR.INCLINACION - velocidadY * JUGADOR.SALTO_LEAN;
+      } else if (squashRestante > 0) {
+        // Aplastamiento breve al aterrizar
+        escalaYObjetivo = JUGADOR.ATERRIZAJE_SQUASH;
+        escalaXZObjetivo = 1.08;
+      }
+
+      const k = Math.min(1, AGACHADA.VELOCIDAD_TRANSICION * dt);
+      contenedor.scale.y += (escalaYObjetivo - contenedor.scale.y) * k;
+      contenedor.scale.x += (escalaXZObjetivo - contenedor.scale.x) * k;
+      contenedor.scale.z += (escalaXZObjetivo - contenedor.scale.z) * k;
+
+      // ---- Zancada / idle ----
       let bob = 0;
+      let balanceo = 0;
+      let cabeceo = 0;
       if (!enAire()) {
-        if (modo === 'correr') {
-          tiempoBob += dt;
-          const fase = tiempoBob * JUGADOR.BOB_FRECUENCIA;
-          bob = Math.abs(Math.sin(fase)) * JUGADOR.BOB_AMPLITUD;
-          raiz.rotation.z = Math.sin(fase) * JUGADOR.BOB_BALANCEO;
-        } else {
-          tiempoBob += dt;
-          bob = Math.abs(Math.sin(tiempoBob * JUGADOR.IDLE_FRECUENCIA)) * JUGADOR.IDLE_AMPLITUD;
-          raiz.rotation.z = 0;
+        if (modo === 'correr' && !agachado) {
+          const frecuencia =
+            JUGADOR.BOB_FRECUENCIA_BASE + JUGADOR.BOB_FRECUENCIA_POR_VELOCIDAD * velocidad;
+          tiempoBob += dt * frecuencia;
+          bob = Math.abs(Math.sin(tiempoBob)) * JUGADOR.BOB_AMPLITUD;
+          balanceo = Math.sin(tiempoBob) * JUGADOR.BOB_BALANCEO;
+          cabeceo = Math.sin(tiempoBob * 2) * JUGADOR.BOB_CABECEO;
+        } else if (modo === 'idle') {
+          tiempoBob += dt * JUGADOR.IDLE_FRECUENCIA;
+          bob = Math.abs(Math.sin(tiempoBob)) * JUGADOR.IDLE_AMPLITUD;
         }
-      } else {
-        raiz.rotation.z = 0;
       }
 
       raiz.position.y = saltoY + bob;
+      raiz.rotation.z = balanceo;
+      raiz.rotation.x += (inclinacionObjetivo + cabeceo - raiz.rotation.x) * Math.min(1, 14 * dt);
     },
   };
 }

@@ -32,9 +32,10 @@ npm run build
 
 ## Cómo jugar (con teclado, hasta calibrar el puntero)
 
+- En la pantalla de espera: **saltar arranca con Migue**, **agacharse arranca con Chanbachi** (el perrobot municipal). Dos botones, dos personajes: sin menús.
 - **Espacio o ⬆**: saltar (vallas, y elegir la opción de ARRIBA en la trivia)
 - **Shift o ⬇**: agacharse (carteles, y elegir la opción de ABAJO)
-- Cualquier botón arranca la partida desde la pantalla de espera.
+- Hay música de fondo (arranca con la partida), festejos argentos ("¡Buena changoooo!") al acertar y cada tantos obstáculos, y blips sintetizados con WebAudio (sin assets de terceros).
 
 ## Cómo probar el puntero USB (Fase 1)
 
@@ -52,6 +53,9 @@ npm run build
 
 ## Assets fuente
 
-El modelo 3D de Migue (`.glb`/`.fbx` + texturas PBR, ~50 MB por variante) y las imágenes de referencia viven **fuera del repo** (son demasiado pesados para versionar tal cual). En la Fase 6 se optimiza el `.glb` (compresión de mallas + reducción de texturas) y esa versión liviana sí se versiona en `public/models/migue.glb`.
+Los modelos 3D originales (Migue ~50 MB, Chanbachi 4.3 MB), la música original y las imágenes de referencia viven **fuera del repo** (gitignoreados en la raíz). Las versiones optimizadas sí se versionan:
+
+- `public/models/migue.glb` (1.45 MB) y `public/models/chanbachi.glb` (183 KB): decimados con gltf-transform + meshopt.
+- `public/audio/musica.mp3`: "Por la Ciudad" de La Vela Puerca — **la Municipalidad declara contar con autorización de uso**. Si esa autorización no cubre la publicación en la web pública, reemplazar por una pista propia o libre antes del evento.
 
 > ⚠️ **Paleta institucional**: los tokens de color en [`src/estilos.css`](src/estilos.css) son una propuesta de trabajo. Antes de publicar, pedir el manual de identidad oficial a la Municipalidad y reemplazar los valores (un cambio de una línea por color).

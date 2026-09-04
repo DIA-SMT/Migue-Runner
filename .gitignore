@@ -8,8 +8,10 @@ dist/
 .DS_Store
 
 # Assets fuente pesados que viven fuera del repo
-# (el modelo optimizado sí se versiona en public/models/)
+# (los assets optimizados sí se versionan en public/)
 *.zip
 *.jpeg
 *.jpg
 *.fbx
+/*.glb
+/*.mp3

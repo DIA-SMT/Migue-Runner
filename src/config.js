@@ -119,13 +119,25 @@ export const CAMARA = {
 };
 
 export const JUGADOR = {
-  ALTURA: 1.8, // altura visual de Migue en unidades de mundo
+  // Alturas visuales de cada personaje en unidades de mundo.
+  // La hitbox de juego es la misma para los dos: elegir es gusto, no ventaja.
+  ALTURA_MIGUE: 1.8,
+  ALTURA_CHANBACHI: 1.3,
 
-  // El modelo no trae animaciones: se simula la carrera con bobbing procedural.
-  BOB_FRECUENCIA: 9, // pasos por segundo
-  BOB_AMPLITUD: 0.07,
-  BOB_BALANCEO: 0.045, // balanceo lateral en radianes
-  INCLINACION: 0.12, // inclinación fija hacia adelante (actitud de correr)
+  // Los modelos no traen animaciones: la carrera se simula procedural.
+  // La frecuencia del paso escala con la velocidad del mundo.
+  BOB_FRECUENCIA_BASE: 7,
+  BOB_FRECUENCIA_POR_VELOCIDAD: 0.28,
+  BOB_AMPLITUD: 0.08,
+  BOB_BALANCEO: 0.05, // balanceo lateral en radianes
+  BOB_CABECEO: 0.035, // cabeceo adelante/atrás por zancada, en radianes
+  INCLINACION: 0.14, // inclinación fija hacia adelante (actitud de correr)
+
+  // Salto: squash & stretch y lean en el aire
+  SALTO_ESTIRAMIENTO: 1.07, // estirado subiendo
+  SALTO_LEAN: 0.022, // rota según velocidad vertical (atrás subiendo, adelante cayendo)
+  ATERRIZAJE_SQUASH: 0.86, // aplastamiento al tocar el suelo
+  ATERRIZAJE_S: 0.14, // cuánto dura el squash
 
   // Respiración del modo idle (pantalla de atracción)
   IDLE_FRECUENCIA: 1.4,
@@ -147,7 +159,9 @@ export const SALTO = {
 export const AGACHADA = {
   MIN_S: 0.4, // dura al menos esto aunque se suelte antes
   ESCALA_Y: 0.55, // achatamiento visual del modelo
-  VELOCIDAD_TRANSICION: 12, // qué tan rápido se interpola la escala
+  ENSANCHE: 1.18, // se ensancha al agacharse (squash creíble)
+  INCLINACION_EXTRA: 0.38, // se inclina hacia adelante, actitud de barrida
+  VELOCIDAD_TRANSICION: 12, // qué tan rápido se interpola la pose
 };
 
 export const OBSTACULOS = {
@@ -168,8 +182,9 @@ export const OBSTACULOS = {
 export const TRIVIA = {
   INTERVALO_S: 14, // cada cuánto aparece un portal de pregunta
   AVISO_S: 3.2, // el enunciado se lee este tiempo antes de llegar al portal
-  DATO_S: 4, // cuánto queda en pantalla el dato posterior
+  DATO_S: 2.6, // cuánto queda en pantalla el dato posterior (corto: no tapar)
   SUPRESION_OBSTACULOS_S: 2.5, // sin obstáculos nuevos alrededor del portal
+  DESPEJE_POST_CRUCE_S: 2.2, // tras responder, se despeja lo que llegaría enseguida
 
   PUNTOS_ACIERTO: 100,
   BONO_RACHA: 25, // puntos extra por acierto consecutivo (x racha)
@@ -186,6 +201,27 @@ export const JUEGO = {
   PUNTOS_POR_METRO: 1,
   RESULTADO_VOLVER_S: 15, // vuelve solo a la atracción (stand desatendido)
   RESULTADO_BLOQUEO_S: 1.2, // ignora botones apenas termina (evita saltearla sin querer)
+};
+
+export const AUDIO = {
+  VOLUMEN_MUSICA: 0.4,
+  VOLUMEN_EFECTOS: 0.25, // blips sintetizados con WebAudio (sin assets)
+};
+
+export const FRASES = {
+  // Festejos argentos: aparecen al acertar trivia y cada tantos obstáculos.
+  LISTA: [
+    '¡Buena changoooo!',
+    '¡Sos capo, che!',
+    '¡Alto player, amigooo!',
+    '¡Metele que va!',
+    '¡Qué crack, papá!',
+    '¡Ídolo total!',
+    '¡La rompés toda!',
+    '¡Sos de otro planeta, che!',
+  ],
+  CADA_ESQUIVADOS: 12, // un festejo cada tantos obstáculos esquivados
+  DURACION_S: 2,
 };
 
 export const LUCES = {

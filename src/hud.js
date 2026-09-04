@@ -13,6 +13,7 @@ export function crearHud() {
   const racha = $('#hud-racha');
   const pregunta = $('#hud-pregunta');
   const feedback = $('#hud-feedback');
+  const frase = $('#hud-frase');
   const juegoHud = $('#hud');
   const atraccion = $('#pantalla-atraccion');
   const resultado = $('#pantalla-resultado');
@@ -93,6 +94,14 @@ export function crearHud() {
 
     ocultarFeedback() {
       feedback.classList.add('oculto');
+    },
+
+    // Festejo argento: placa dorada que aparece y se va sola (animación CSS).
+    mostrarFrase(texto) {
+      frase.textContent = texto;
+      frase.classList.remove('animar');
+      void frase.offsetWidth; // reinicia la animación CSS
+      frase.classList.add('animar');
     },
   };
 }

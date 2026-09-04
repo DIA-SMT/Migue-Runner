@@ -10,10 +10,11 @@ import { EffectComposer } from 'three/addons/postprocessing/EffectComposer.js';
 import { RenderPass } from 'three/addons/postprocessing/RenderPass.js';
 import { UnrealBloomPass } from 'three/addons/postprocessing/UnrealBloomPass.js';
 import { OutputPass } from 'three/addons/postprocessing/OutputPass.js';
-import { PALETA, MUNDO, CAMARA, LUCES, POST, RENDER, JUEGO, TRIVIA, OBSTACULOS } from './config.js';
+import { PALETA, MUNDO, CAMARA, LUCES, POST, RENDER, JUEGO, TRIVIA, OBSTACULOS, FRASES } from './config.js';
 import { crearMundo } from './world.js';
-import { crearMigue } from './player.js';
+import { crearPersonajes } from './player.js';
 import { crearEntrada } from './input.js';
+import { crearAudio } from './audio.js';
 import { crearObstaculos } from './obstaculos.js';
 import { crearPortal } from './portals.js';
 import { cargarPreguntas } from './quiz.js';
@@ -78,12 +79,13 @@ composer.addPass(new OutputPass());
 const mundo = crearMundo(escena);
 const entrada = crearEntrada();
 const hud = crearHud();
+const audio = crearAudio();
 const obstaculos = crearObstaculos(escena);
 const portal = crearPortal(escena);
 
-let migue = null;
-crearMigue(escena).then((resultado) => {
-  migue = resultado;
+let jugador = null;
+crearPersonajes(escena).then((resultado) => {
+  jugador = resultado;
   document.querySelector('#cargando')?.remove();
 });
 
@@ -107,14 +109,20 @@ const partida = {
   invulnerable: 0, // segundos restantes de invulnerabilidad tras un golpe
   proximaTrivia: TRIVIA.INTERVALO_S * 0.6, // la primera pregunta llega antes
   feedbackTimer: 0,
-  preguntaPendiente: null,
+  esquivados: 0, // obstáculos superados (para los festejos)
+  proximoFestejo: FRASES.CADA_ESQUIVADOS,
 };
+
+function fraseAlAzar() {
+  return FRASES.LISTA[Math.floor(Math.random() * FRASES.LISTA.length)];
+}
 
 function perderVida() {
   if (partida.invulnerable > 0) return;
   partida.vidas--;
   partida.invulnerable = OBSTACULOS.INVULNERABLE_S;
   hud.actualizarVidas(partida.vidas);
+  audio.golpe();
   if (partida.vidas <= 0) estados.cambiar('RESULTADO');
 }
 
@@ -131,6 +139,8 @@ function resolverCruce(cruce) {
     partida.racha++;
     partida.puntaje += TRIVIA.PUNTOS_ACIERTO + TRIVIA.BONO_RACHA * (partida.racha - 1);
     hud.mostrarFeedback('ok', '¡Correcto!', pregunta.dato ?? '');
+    hud.mostrarFrase(fraseAlAzar());
+    audio.acierto();
   } else {
     partida.racha = 0;
     const correcta = pregunta.correcta === 'arriba' ? pregunta.opcionArriba : pregunta.opcionAbajo;
@@ -139,6 +149,12 @@ function resolverCruce(cruce) {
   }
   hud.actualizarRacha(partida.racha);
   partida.feedbackTimer = TRIVIA.DATO_S;
+
+  // Que nada te llegue mientras leés el dato: sin spawns nuevos y despeje
+  // de lo que ya venía demasiado cerca.
+  obstaculos.suprimir(TRIVIA.DESPEJE_POST_CRUCE_S);
+  const despeje = partida.velocidad * TRIVIA.DESPEJE_POST_CRUCE_S;
+  obstaculos.despejarCerca(-despeje / 2, despeje / 2 + 2);
 }
 
 // ---------------------------------------------------------------------------
@@ -148,13 +164,14 @@ const estados = crearEstados({
   ATRACCION: {
     entrar() {
       hud.mostrarAtraccion();
-      migue?.reiniciar();
+      jugador?.reiniciar();
+      jugador?.modoAtraccion(); // Migue y Chanbachi, lado a lado
       portal.descartar();
       obstaculos.reiniciar();
     },
     actualizar(dt) {
       mundo.actualizar(dt, MUNDO.VELOCIDAD_ATRACCION);
-      migue?.actualizar(dt, 'idle');
+      jugador?.actualizar(dt, 'idle');
     },
   },
 
@@ -172,14 +189,16 @@ const estados = crearEstados({
         invulnerable: 0,
         proximaTrivia: TRIVIA.INTERVALO_S * 0.6,
         feedbackTimer: 0,
-        preguntaPendiente: null,
+        esquivados: 0,
+        proximoFestejo: FRASES.CADA_ESQUIVADOS,
       });
-      migue?.reiniciar();
+      jugador?.reiniciar();
       obstaculos.reiniciar(true);
       portal.descartar();
       hud.mostrarJuego();
       hud.actualizarVidas(partida.vidas);
       hud.actualizarRacha(0);
+      audio.iniciarMusica(); // hay gesto del usuario: el autoplay no molesta
     },
     actualizar(dt) {
       // Velocidad y distancia
@@ -189,19 +208,26 @@ const estados = crearEstados({
       partida.puntaje += partida.velocidad * dt * JUEGO.PUNTOS_POR_METRO;
 
       mundo.actualizar(dt, partida.velocidad);
-      migue?.actualizar(dt, 'correr');
+      jugador?.actualizar(dt, 'correr', partida.velocidad);
 
       // Invulnerabilidad post-golpe: parpadeo
       if (partida.invulnerable > 0) {
         partida.invulnerable -= dt;
-        if (migue) migue.objeto.visible = Math.floor(partida.invulnerable * 10) % 2 === 0;
-        if (partida.invulnerable <= 0 && migue) migue.objeto.visible = true;
+        if (jugador) jugador.objeto.visible = Math.floor(partida.invulnerable * 10) % 2 === 0;
+        if (partida.invulnerable <= 0 && jugador) jugador.objeto.visible = true;
       }
 
       // Obstáculos
-      if (migue) {
-        const eventos = obstaculos.actualizar(dt, partida.velocidad, migue);
+      if (jugador) {
+        const eventos = obstaculos.actualizar(dt, partida.velocidad, jugador);
         if (eventos.colision) perderVida();
+        partida.esquivados += eventos.esquivados;
+        // Festejo argento cada tantos obstáculos superados
+        if (partida.esquivados >= partida.proximoFestejo) {
+          partida.proximoFestejo += FRASES.CADA_ESQUIVADOS;
+          hud.mostrarFrase(fraseAlAzar());
+          audio.festejo();
+        }
       }
 
       // Trivia: programación del portal
@@ -217,8 +243,8 @@ const estados = crearEstados({
       }
 
       // Trivia: cruce del portal
-      if (migue) {
-        const cruce = portal.actualizar(dt, partida.velocidad, migue);
+      if (jugador) {
+        const cruce = portal.actualizar(dt, partida.velocidad, jugador);
         if (cruce) resolverCruce(cruce);
       }
 
@@ -231,7 +257,7 @@ const estados = crearEstados({
       hud.actualizarPuntaje(partida.puntaje);
     },
     salir() {
-      if (migue) migue.objeto.visible = true;
+      if (jugador) jugador.objeto.visible = true;
     },
   },
 
@@ -244,7 +270,7 @@ const estados = crearEstados({
     },
     actualizar(dt) {
       mundo.actualizar(dt, MUNDO.VELOCIDAD_ATRACCION);
-      migue?.actualizar(dt, 'idle');
+      jugador?.actualizar(dt, 'idle');
       resultadoBloqueo -= dt;
       resultadoTemporizador -= dt;
       // Vuelve solo a la atracción: stand desatendido.
@@ -260,22 +286,32 @@ let resultadoBloqueo = 0;
 // ---------------------------------------------------------------------------
 // Ruteo de la entrada según el estado
 // ---------------------------------------------------------------------------
+// En la atracción, los dos botones eligen personaje y arrancan la partida:
+// saltar = Migue, agacharse = Chanbachi (dos botones, dos personajes).
 entrada.on('saltar', () => {
-  if (estados.actual === 'JUGANDO') migue?.saltar();
+  if (estados.actual === 'JUGANDO') {
+    jugador?.saltar();
+  } else if (estados.actual === 'ATRACCION' && jugador) {
+    jugador.seleccionar('migue');
+    estados.cambiar('JUGANDO');
+  }
 });
 entrada.on('agacharse', () => {
-  if (estados.actual === 'JUGANDO') migue?.agacharse(true);
+  if (estados.actual === 'JUGANDO') {
+    jugador?.agacharse(true);
+  } else if (estados.actual === 'ATRACCION' && jugador) {
+    jugador.seleccionar('chanbachi');
+    estados.cambiar('JUGANDO');
+  }
 });
 entrada.on('soltarAgacharse', () => {
-  migue?.agacharse(false);
+  jugador?.agacharse(false);
 });
 entrada.on('cualquiera', () => {
-  if (estados.actual === 'ATRACCION') {
-    estados.cambiar('JUGANDO');
-  } else if (estados.actual === 'RESULTADO' && resultadoBloqueo <= 0) {
-    // Tras un breve bloqueo (para no saltear el puntaje sin querer),
-    // cualquier botón arranca una partida nueva.
-    estados.cambiar('JUGANDO');
+  // Tras un breve bloqueo (para no saltear el puntaje sin querer),
+  // cualquier botón vuelve a la selección de personaje.
+  if (estados.actual === 'RESULTADO' && resultadoBloqueo <= 0) {
+    estados.cambiar('ATRACCION');
   }
 });
 

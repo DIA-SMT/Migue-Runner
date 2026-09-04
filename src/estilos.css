@@ -120,17 +120,19 @@ body {
   border-bottom: 5px solid var(--smt-dorado);
 }
 
-/* Feedback de respuesta (correcto / incorrecto / sin respuesta) */
+/* Feedback de respuesta (correcto / incorrecto / sin respuesta).
+   Va ARRIBA, donde estaba el enunciado (que ya se ocultó): nunca tapa
+   los obstáculos que vienen por el centro de la pantalla. */
 #hud-feedback {
   position: absolute;
-  top: 26vh;
+  top: 4vh;
   left: 50%;
   transform: translateX(-50%);
-  max-width: min(78vw, 26em);
+  max-width: min(72vw, 26em);
   text-align: center;
-  padding: 0.5em 0.9em;
+  padding: 0.4em 0.9em;
   border-radius: 0.3em;
-  font-size: clamp(32px, 3vw, 42px);
+  font-size: clamp(32px, 2.8vw, 40px);
   background: color-mix(in srgb, var(--smt-azul-hondo) 88%, transparent);
 }
 
@@ -166,6 +168,36 @@ body {
 }
 .feedback-neutro strong {
   color: var(--smt-celeste);
+}
+
+/* Festejo argento: placa dorada inclinada que aparece con pop y se esfuma */
+#hud-frase {
+  position: absolute;
+  top: 56vh;
+  left: 50%;
+  font-size: clamp(36px, 4.2vw, 58px);
+  font-weight: 800;
+  white-space: nowrap;
+  color: var(--smt-azul-hondo);
+  background: var(--smt-dorado);
+  padding: 0.2em 0.7em;
+  border-radius: 0.25em;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.35);
+  opacity: 0;
+  transform: translateX(-50%) rotate(-5deg) scale(0.6);
+  pointer-events: none;
+}
+
+#hud-frase.animar {
+  animation: frase-pop 2s ease forwards;
+}
+
+@keyframes frase-pop {
+  0% { opacity: 0; transform: translateX(-50%) rotate(-5deg) scale(0.6); }
+  12% { opacity: 1; transform: translateX(-50%) rotate(-5deg) scale(1.08); }
+  20% { transform: translateX(-50%) rotate(-5deg) scale(1); }
+  78% { opacity: 1; }
+  100% { opacity: 0; transform: translateX(-50%) rotate(-5deg) scale(1) translateY(-0.6em); }
 }
 
 /* ---------- Título (pantalla de atracción) ---------- */
@@ -239,9 +271,13 @@ body {
   color: var(--smt-celeste);
 }
 
+.atraccion-controles strong {
+  color: var(--smt-dorado);
+}
+
 .atraccion-prompt {
   display: table;
-  margin: 1em auto 0;
+  margin: 0 auto 0.8em;
   font-size: clamp(28px, 3vw, 40px);
   font-weight: 800;
   letter-spacing: 0.12em;
