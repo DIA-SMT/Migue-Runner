@@ -19,14 +19,16 @@ npm run build
 
 ## Estado — orden de implementación
 
-- [x] **Fase 1 — Entrada**: página de diagnóstico que imprime el `event.code` de cada tecla. Probar con el puntero USB real y anotar los códigos de cada botón.
-- [ ] Fase 2 — Calibración (dos pasos + `localStorage`)
-- [ ] Fase 3 — Prototipo gris (cubo que corre, salta, se agacha)
+- [x] **Fase 1 — Entrada**: página de diagnóstico que imprime el `event.code` de cada tecla, en [`/test-entrada.html`](test-entrada.html). Falta probarla con el puntero USB real y anotar los códigos de cada botón.
+- [ ] Fase 2 — Calibración (dos pasos + `localStorage`) — *pendiente hasta tener el puntero a mano*
+- [ ] Fase 3 — Prototipo gris (correr, saltar, agacharse)
 - [ ] Fase 4 — Obstáculos y colisión
 - [ ] Fase 5 — Trivia (portales dobles + `preguntas.json`)
-- [ ] Fase 6 — Modelo de Migue (`.glb` + animaciones)
-- [ ] Fase 7 — Arte y ambiente (paleta, parallax, niebla, bloom)
+- [x] **Fase 6 — Modelo de Migue** *(adelantada)*: `.glb` optimizado de 47.7 MB → 1.45 MB (decimado a ~100k triángulos, textura WebP 1024, compresión meshopt). No trae animaciones: carrera simulada con bobbing procedural, como prevé el documento.
+- [x] **Fase 7 — Arte y ambiente** *(adelantada)*: cielo con degradé de siesta, sol con bloom, siluetas del Aconquija, lomas en parallax, cañaverales instanciados, sendero de tierra, niebla `FogExp2`, luz cálida + relleno frío. 60 fps, ~11 draw calls.
 - [ ] Fase 8 — Pulido de stand (atracción, auto-reset, pantalla completa)
+
+> La portada actual (`index.html`) es la **vista previa de arte**: el mundo en movimiento con Migue corriendo. El gameplay se integra al retomar las fases 2–5.
 
 ## Cómo probar la Fase 1
 

@@ -7,4 +7,14 @@ export default defineConfig({
   server: {
     port: Number(process.env.PORT) || 5173,
   },
+
+  // Dos páginas: el juego y el diagnóstico de teclas de la Fase 1.
+  build: {
+    rollupOptions: {
+      input: {
+        principal: 'index.html',
+        testEntrada: 'test-entrada.html',
+      },
+    },
+  },
 });
