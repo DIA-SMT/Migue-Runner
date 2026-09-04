@@ -19,7 +19,7 @@ npm run build
 
 ## Estado — orden de implementación
 
-- [x] **Fase 1 — Entrada**: página de diagnóstico que imprime el `event.code` de cada tecla, en [`/test-entrada.html`](test-entrada.html). Falta probarla con el puntero USB real y anotar los códigos de cada botón.
+- [x] **Fase 1 — Entrada**: página de diagnóstico en [`/test-entrada.html`](test-entrada.html) que imprime el `event.code` de cada tecla, la duración de cada pulsación y un veredicto sobre si el puntero sostiene el botón. **Probada con el puntero real**: emite un solo código limpio por botón (`ArrowRight` / `ArrowLeft`), sin teclas reservadas por el navegador.
 - [x] **Fase 2 — Calibración**: pantalla de dos pasos que captura el `event.code` de cada botón y lo persiste en `localStorage` (`migue.controles`). Rechaza el botón repetido y los códigos reservados del navegador (`F5`, `F11`, `F12`, `Escape`, `Tab`, `Meta`). Se abre con la tecla **C** o manteniendo los dos botones del puntero 3 segundos; `Escape` cancela sin guardar. **Falta probarla con el puntero real**, pero el flujo completo (captura → guardado → control del juego) está verificado con códigos de puntero típicos (`PageDown`/`PageUp`).
 - [x] **Fase 3 — Correr, saltar, agacharse**: salto parabólico (~0.6 s), agachada con mínimo de 0.4 s, hitbox propia más chica que el modelo.
 - [x] **Fase 4 — Obstáculos y colisión**: vallas (se saltan) y carteles colgantes (se pasan agachado), AABB, 3 vidas con invulnerabilidad y parpadeo, velocidad creciente.
@@ -36,18 +36,20 @@ npm run build
 ## Cómo jugar (con teclado, hasta calibrar el puntero)
 
 - En la pantalla de espera: **saltar arranca con Migue**, **agacharse arranca con Chanbachi** (el perrobot municipal). Dos botones, dos personajes: sin menús.
-- **Espacio o ⬆**: saltar (vallas, y elegir la opción de ARRIBA en la trivia)
-- **Shift o ⬇**: agacharse (carteles, y elegir la opción de ABAJO)
+- **Puntero USB**: botón adelante = saltar, botón atrás = agacharse.
+- **Espacio, ⬆ o ➡**: saltar (vallas, y elegir la opción de ARRIBA en la trivia)
+- **Shift, ⬇ o ⬅**: agacharse (carteles, y elegir la opción de ABAJO)
 - **Mobile/tablet (táctil)**: tocar la **mitad de arriba** de la pantalla = saltar, tocar la **mitad de abajo** = agacharse. Es el mismo criterio arriba/abajo que ya usan los portales de trivia, así que no hace falta explicar nada nuevo — el dedo reemplaza uno a uno los dos botones del puntero físico. El HUD detecta el dispositivo y muestra el hint que corresponde ("tocá arriba/abajo" en vez de "Espacio/Shift").
 - Hay música de fondo (arranca con la partida), festejos argentos ("¡Buena changoooo!") al acertar y cada tantos obstáculos, y blips sintetizados con WebAudio (sin assets de terceros).
 
 ## Montaje del stand
 
 1. Enchufar el puntero presentador USB y abrir el juego en Chrome/Edge.
-2. Apretar **C** (o mantener los dos botones del puntero 3 segundos) para abrir la calibración, y seguir los dos pasos.
-3. Apretar **F** para pantalla completa.
+2. Apretar **F** para pantalla completa.
 
-Queda calibrado para siempre en esa máquina: la configuración vive en `localStorage`.
+**Eso es todo.** El puntero del municipio ya funciona sin configurar nada: sus códigos (`ArrowRight` adelante = saltar, `ArrowLeft` atrás = agacharse) están medidos con el dispositivo real y viven en `ENTRADA.RESPALDO_TECLADO` de [`src/config.js`](src/config.js). Anda al instante en cualquier máquina, aunque se borre el almacenamiento del navegador o se abra en ventana privada.
+
+Para **otro** puntero que emita códigos distintos: apretar **C** (o mantener los dos botones 3 segundos) y seguir los dos pasos de calibración. Eso queda guardado en `localStorage` de esa máquina y convive con los códigos de arriba.
 
 ## Cómo probar el puntero USB (Fase 1)
 

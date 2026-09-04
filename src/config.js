@@ -9,10 +9,18 @@ export const ENTRADA = {
   // Clave de localStorage donde se persiste la calibración del puntero.
   CLAVE_STORAGE: 'migue.controles',
 
-  // Teclado físico como respaldo, en paralelo al puntero calibrado.
+  // Códigos que funcionan siempre, sin calibrar nada. Incluye el teclado
+  // físico (para desarrollo y por si el puntero falla en vivo) y los
+  // códigos del puntero del municipio, medidos con el dispositivo real:
+  // botón adelante → ArrowRight, botón atrás → ArrowLeft.
+  //
+  // Tenerlos acá y no solo en la calibración importa: el stand anda al
+  // instante en cualquier máquina, aunque se borre el localStorage o se
+  // abra en una ventana privada. La calibración sigue disponible para
+  // cualquier otro puntero que emita códigos distintos.
   RESPALDO_TECLADO: {
-    saltar: ['Space', 'ArrowUp'],
-    agacharse: ['ShiftLeft', 'ArrowDown'],
+    saltar: ['Space', 'ArrowUp', 'ArrowRight'],
+    agacharse: ['ShiftLeft', 'ArrowDown', 'ArrowLeft'],
   },
 
   // Recalibración: tecla física, o mantener ambos botones del puntero.
