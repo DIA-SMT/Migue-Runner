@@ -632,3 +632,29 @@ body {
   color: var(--smt-dorado);
   max-width: 80vw;
 }
+
+/* Veredicto sobre si el puntero sostiene la pulsación (afecta la agachada) */
+.diagnostico .veredicto {
+  font-size: 32px;
+  font-weight: 700;
+  max-width: 70ch;
+  padding: 0.4em 0.8em;
+  border-radius: 0.3em;
+  background: color-mix(in srgb, var(--smt-azul-hondo) 80%, transparent);
+}
+
+.diagnostico .veredicto:empty {
+  display: none;
+}
+
+.diagnostico .veredicto.ok {
+  border-bottom: 5px solid var(--ok);
+}
+
+.diagnostico .veredicto.aviso {
+  border-bottom: 5px solid var(--smt-dorado);
+}
+
+.diagnostico .instruccion b {
+  color: var(--smt-dorado);
+}
