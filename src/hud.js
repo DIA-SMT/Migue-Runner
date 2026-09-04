@@ -9,6 +9,7 @@ const $ = (selector) => document.querySelector(selector);
 
 export function crearHud() {
   const vidas = $('#hud-vidas');
+  const nivel = $('#hud-nivel');
   const puntaje = $('#hud-puntaje');
   const soles = $('#hud-soles');
   const racha = $('#hud-racha');
@@ -103,6 +104,11 @@ export function crearHud() {
 
     actualizarRacha(valor) {
       racha.textContent = valor >= 2 ? `racha ×${valor}` : '';
+    },
+
+    // Nombre del tramo actual, bajo las vidas.
+    actualizarNivel(nombre) {
+      nivel.textContent = nombre;
     },
 
     // --------- Trivia ---------

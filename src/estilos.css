@@ -96,6 +96,25 @@ body {
   letter-spacing: 0.08em;
 }
 
+/* Nombre del tramo actual, debajo de las vidas */
+.hud-nivel {
+  position: absolute;
+  top: calc(3vh + 3.2em);
+  left: 3vw;
+  max-width: 40vw;
+  font-size: clamp(22px, 2.2vw, 30px);
+  font-weight: 700;
+  color: var(--smt-blanco);
+  background: color-mix(in srgb, var(--smt-azul-hondo) 78%, transparent);
+  padding: 0.2em 0.6em;
+  border-radius: 0.25em;
+  border-left: 5px solid var(--smt-dorado);
+}
+
+.hud-nivel:empty {
+  display: none;
+}
+
 .hud-derecha {
   position: absolute;
   top: 3vh;

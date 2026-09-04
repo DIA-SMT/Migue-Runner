@@ -29,6 +29,7 @@ import { crearPersonajes } from './player.js';
 import { crearEntrada } from './input.js';
 import { crearAudio } from './audio.js';
 import { crearObstaculos } from './obstaculos.js';
+import { crearDificultad } from './dificultad.js';
 import { crearColeccionables } from './coleccionables.js';
 import { crearParticulas } from './particulas.js';
 import { crearPortal } from './portals.js';
@@ -95,7 +96,8 @@ composer.addPass(new OutputPass());
 const mundo = crearMundo(escena);
 const hud = crearHud();
 const audio = crearAudio();
-const obstaculos = crearObstaculos(escena);
+const dificultad = crearDificultad();
+const obstaculos = crearObstaculos(escena, dificultad);
 const particulas = crearParticulas(escena);
 const portal = crearPortal(escena);
 
@@ -240,6 +242,7 @@ const estados = crearEstados({
       jugador?.reiniciar();
       jugador?.modoAtraccion(); // Migue y Chanbachi, lado a lado
       portal.descartar();
+      dificultad.reiniciar();
       obstaculos.reiniciar();
       coleccionables.reiniciar();
       particulas.limpiar();
@@ -271,7 +274,8 @@ const estados = crearEstados({
         esRecord: false,
       });
       jugador?.reiniciar();
-      obstaculos.reiniciar(true);
+      dificultad.reiniciar();
+      obstaculos.reiniciar(true, MUNDO.VELOCIDAD_INICIAL);
       coleccionables.reiniciar();
       particulas.limpiar();
       portal.descartar();
@@ -279,6 +283,7 @@ const estados = crearEstados({
       hud.actualizarVidas(partida.vidas);
       hud.actualizarSoles(0);
       hud.actualizarRacha(0);
+      hud.actualizarNivel(dificultad.nivel.nombre);
       audio.iniciarMusica(); // hay gesto del usuario: el autoplay no molesta
     },
     actualizar(dt) {
@@ -291,6 +296,14 @@ const estados = crearEstados({
       mundo.actualizar(dt, partida.velocidad);
       jugador?.actualizar(dt, 'correr', partida.velocidad);
       particulas.actualizar(dt, partida.velocidad);
+
+      // Dificultad: cada nivel habilita obstáculos y combos nuevos.
+      const nivelNuevo = dificultad.revisarAscenso(partida.distancia);
+      if (nivelNuevo) {
+        hud.actualizarNivel(nivelNuevo.nombre);
+        hud.mostrarFrase(nivelNuevo.nombre);
+        audio.festejo();
+      }
 
       // Invulnerabilidad post-golpe: parpadeo
       if (partida.invulnerable > 0) {

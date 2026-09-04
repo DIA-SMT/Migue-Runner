@@ -22,7 +22,8 @@ npm run build
 - [x] **Fase 1 — Entrada**: página de diagnóstico en [`/test-entrada.html`](test-entrada.html) que imprime el `event.code` de cada tecla, la duración de cada pulsación y un veredicto sobre si el puntero sostiene el botón. **Probada con el puntero real**: emite un solo código limpio por botón (`ArrowRight` / `ArrowLeft`), sin teclas reservadas por el navegador.
 - [x] **Fase 2 — Calibración**: pantalla de dos pasos que captura el `event.code` de cada botón y lo persiste en `localStorage` (`migue.controles`). Rechaza el botón repetido y los códigos reservados del navegador (`F5`, `F11`, `F12`, `Escape`, `Tab`, `Meta`). Se abre con la tecla **C** o manteniendo los dos botones del puntero 3 segundos; `Escape` cancela sin guardar. **Falta probarla con el puntero real**, pero el flujo completo (captura → guardado → control del juego) está verificado con códigos de puntero típicos (`PageDown`/`PageUp`).
 - [x] **Fase 3 — Correr, saltar, agacharse**: salto parabólico (~0.6 s), agachada con mínimo de 0.4 s, hitbox propia más chica que el modelo.
-- [x] **Fase 4 — Obstáculos y colisión**: vallas (se saltan) y carteles colgantes (se pasan agachado), AABB, 3 vidas con invulnerabilidad y parpadeo, velocidad creciente.
+- [x] **Fase 4 — Obstáculos y colisión**: AABB, 3 vidas con invulnerabilidad y parpadeo, velocidad creciente. **Siete tipos de obstáculo** en dos clases: se saltan la valla municipal, los cajones de feria, el puesto de empanadas y el banco de plaza; se pasan agachado el cartel colgante, la guirnalda de banderines y el toldo de comercio.
+- [x] **Dificultad progresiva**: siete tramos por distancia, cada uno con su nombre anunciado en pantalla (*De paseo por la peatonal* → … → *¡Plena zafra!*). Cada tramo habilita tipos nuevos, acorta el intervalo entre obstáculos y suma **combos**: dos obstáculos seguidos que obligan a encadenar salto y agachada. Ver [`src/dificultad.js`](src/dificultad.js).
 - [x] **Fase 5 — Trivia**: portales dobles (arriba = saltar, abajo = agacharse), enunciado 3 s antes en el HUD, carga y validación de `preguntas.json` (32 preguntas: 20 San Miguel, 7 Tucumán, 5 generales), mezcla 50/30/20, sin repetición, posición correcta aleatorizada, dato posterior, puntaje con racha.
 - [x] **Fase 6 — Modelo de Migue**: `.glb` optimizado de 47.7 MB → 1.45 MB (decimado a ~100k triángulos, textura WebP 1024, compresión meshopt). No trae animaciones: carrera simulada con bobbing procedural, como prevé el documento.
 - [x] **Fase 7 — Arte y ambiente**: el **centro de San Miguel de Tucumán** — peatonal de baldosas con guarda roja, casas coloniales de pasteles, **Casa Histórica** y **Catedral** como hitos reconocibles, lapachos en flor, faroles, cerros del Aconquija de fondo, sol con bloom, niebla `FogExp2`. Cada banda de edificios es una sola malla fusionada (~15 draw calls en total).
@@ -59,6 +60,21 @@ Para inspeccionar qué códigos emite un puntero desconocido, sin calibrar nada:
 2. Enchufar el puntero presentador USB.
 3. Apretar cada botón: el `event.code` aparece gigante en pantalla, con historial, marca de auto-repeat y tiempo entre eventos.
 4. Anotar qué código emite el botón "adelante" y el "atrás" del modelo concreto (varía por marca: `PageDown`/`PageUp`, flechas, `Space`, etc.).
+
+## Ajustar la dificultad
+
+Todo vive en `DIFICULTAD` de [`src/config.js`](src/config.js):
+
+- **`NIVELES`**: cada tramo declara desde qué metro empieza, su nombre, qué `tipos` de obstáculo habilita, qué `patrones` (`simple`, `dobleBajo`, `bajoAlto`, `altoBajo`) y el `intervalo` entre spawns. Agregar o correr un tramo es editar ese array.
+- **`MARGEN_COMBO`**: cuánto aire de más se le da al jugador en los combos. `1.0` sería justo al límite físico; el valor actual le concede casi medio salto extra. Bajarlo endurece el juego.
+
+Las separaciones de los combos **no se escriben a mano**: `dificultad.js` las deriva de la física del salto y del mínimo de la agachada, así que nunca puede quedar un combo imposible por tocar un número. Si cambiás `SALTO` o `AGACHADA`, las separaciones se reajustan solas.
+
+## Inspector de obstáculos (herramienta de desarrollo)
+
+`npm run dev` y abrir `/inspector.html` muestra los siete obstáculos alineados con su **caja de colisión dibujada encima** (verde los bajos, roja los altos) y tres líneas de referencia: altura de los pies en el pico del salto, techo de la hitbox agachada y techo de pie. Sirve para revisar el arte y confirmar de un vistazo que cada obstáculo se pueda franquear.
+
+`?x=` centra la vista en una posición de la fila y `?z=` acerca o aleja: por ejemplo `/inspector.html?x=15&z=9` mira el toldo de frente. No entra al build de producción (`vite.config.js` declara sólo `index.html` y `test-entrada.html`).
 
 ## Convenciones del proyecto
 

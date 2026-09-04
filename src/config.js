@@ -93,6 +93,21 @@ export const PALETA = {
   VALLA_BLANCO: 0xf7f9fb,
   CARTEL_POSTE: 0x51606d,
   PORTAL_MARCO: 0x4fa3d1, // celeste institucional (se multiplica para el glow)
+
+  // Obstáculos temáticos (feria y comercio del centro)
+  MADERA: 0x8a5f3c,
+  MADERA_CLARA: 0xb08355,
+  HIERRO: 0x3a4750,
+  MANTEL: 0xc0453b,
+  EMPANADA: 0xdba85e, // dorado de empanada tucumana recién frita
+  EMPANADA_TOSTADA: 0xc08a42, // repulgue más dorado
+  CANASTA: 0xa9762f,
+  FRUTA_A: 0xd9772e, // naranjas
+  FRUTA_B: 0x8fae3f, // verduras
+  BANDERIN_A: 0x6cb7e0, // celeste patrio
+  BANDERIN_B: 0xf7f9fb, // blanco patrio
+  TOLDO_A: 0xc0453b,
+  TOLDO_B: 0xf2e3c9,
 };
 
 export const MUNDO = {
@@ -183,17 +198,110 @@ export const AGACHADA = {
 
 export const OBSTACULOS = {
   Z_SPAWN: -170, // dónde nacen (la niebla tapa el borde)
-  Z_FUERA: 10, // pasada esta z quedan atrás y se reciclan
-  INTERVALO_MIN_S: 1.9, // separación temporal entre obstáculos
-  INTERVALO_MAX_S: 3.2,
+
+  // Z de retiro, distinta por clase. La cámara está en z≈4.2:
+  //  - Los BAJOS pueden seguir de largo: son bajos y salen por el borde
+  //    inferior de la pantalla, que es lo que se espera al pasarlos.
+  //  - Los ALTOS tienen que irse antes de llegar a la cámara. Un toldo de
+  //    3.8 de ancho atravesándola tapa media pantalla justo cuando el
+  //    jugador necesita ver lo que viene.
+  Z_FUERA_BAJO: 10,
+  Z_FUERA_ALTO: 2,
+
   REACCION_MIN_S: 1.2, // ningún obstáculo puede quedar a menos de esto del jugador
   INVULNERABLE_S: 1.3, // tras un golpe, ventana sin daño (parpadeo)
 
-  // Bajo: valla municipal (se salta)
-  VALLA: { ANCHO: 2.6, ALTO: 0.62, PROFUNDO: 0.25 },
+  // Instancias por tipo en el pool. Nunca se crean mallas en caliente; las
+  // inactivas no cuestan draw calls y la geometría se comparte entre las
+  // instancias de un mismo tipo, así que sobran barato.
+  //
+  // El peor caso es el nivel 0, que tiene un solo tipo habilitado: a la
+  // velocidad inicial un obstáculo tarda Z_SPAWN/v ≈ 21 s en cruzar la
+  // pista, y con el intervalo mínimo de ese nivel eso da ~9 vallas en
+  // vuelo a la vez. 12 deja aire.
+  POOL_POR_TIPO: 12,
 
-  // Alto: cartel colgante entre postes (se pasa agachado)
-  CARTEL: { ALTO_LIBRE: 1.35, PANEL_ALTO: 1.0, ANCHO: 3.6, PROFUNDO: 0.15 },
+  // --- Catálogo de obstáculos ---
+  // clase 'bajo': se salta. ALTO tiene que quedar por debajo de la altura
+  //   del salto (SALTO.VELOCIDAD_INICIAL² / 2·GRAVEDAD ≈ 0.87) con margen.
+  // clase 'alto': se pasa agachado. ALTO_LIBRE tiene que superar la hitbox
+  //   agachada (JUGADOR.HITBOX.ALTO_AGACHADO = 0.85) con margen.
+  // Los tipos están de más fácil a más difícil dentro de cada clase.
+  TIPOS: {
+    valla: { clase: 'bajo', ANCHO: 2.6, ALTO: 0.62, PROFUNDO: 0.25 },
+    cajones: { clase: 'bajo', ANCHO: 2.2, ALTO: 0.55, PROFUNDO: 0.5 },
+    empanadas: { clase: 'bajo', ANCHO: 2.4, ALTO: 0.72, PROFUNDO: 0.55 },
+    banco: { clase: 'bajo', ANCHO: 2.8, ALTO: 0.68, PROFUNDO: 0.5 },
+    cartel: { clase: 'alto', ANCHO: 3.6, ALTO_LIBRE: 1.35, PANEL_ALTO: 1.0, PROFUNDO: 0.15 },
+    banderines: { clase: 'alto', ANCHO: 4.2, ALTO_LIBRE: 1.2, PANEL_ALTO: 0.75, PROFUNDO: 0.15 },
+    toldo: { clase: 'alto', ANCHO: 3.8, ALTO_LIBRE: 1.05, PANEL_ALTO: 0.9, PROFUNDO: 0.7 },
+  },
+};
+
+export const DIFICULTAD = {
+  // Niveles por distancia recorrida (metros). Cada uno habilita tipos de
+  // obstáculo y patrones nuevos, y acorta el intervalo entre spawns.
+  // El nombre se anuncia en el HUD al entrar.
+  NIVELES: [
+    {
+      desde: 0,
+      nombre: 'De paseo por la peatonal',
+      tipos: ['valla'],
+      patrones: ['simple'],
+      intervalo: [2.6, 3.6],
+    },
+    {
+      desde: 140,
+      nombre: '¡Cuidado con la feria!',
+      tipos: ['valla', 'cajones'],
+      patrones: ['simple'],
+      intervalo: [2.4, 3.4],
+    },
+    {
+      desde: 300,
+      nombre: '¡Puesto de empanadas!',
+      tipos: ['valla', 'cajones', 'empanadas'],
+      patrones: ['simple'],
+      intervalo: [2.2, 3.2],
+    },
+    {
+      desde: 480,
+      nombre: 'Agachate, chango',
+      tipos: ['valla', 'cajones', 'empanadas', 'cartel'],
+      patrones: ['simple'],
+      intervalo: [2.1, 3.0],
+    },
+    {
+      desde: 700,
+      nombre: 'Fiestas patrias',
+      tipos: ['valla', 'cajones', 'empanadas', 'banco', 'cartel', 'banderines'],
+      patrones: ['simple', 'dobleBajo'],
+      intervalo: [2.0, 2.8],
+    },
+    {
+      desde: 980,
+      nombre: 'Hora pico en el centro',
+      tipos: ['valla', 'cajones', 'empanadas', 'banco', 'cartel', 'banderines', 'toldo'],
+      patrones: ['simple', 'dobleBajo', 'bajoAlto'],
+      intervalo: [1.9, 2.6],
+    },
+    {
+      desde: 1350,
+      nombre: '¡Plena zafra!',
+      tipos: ['valla', 'cajones', 'empanadas', 'banco', 'cartel', 'banderines', 'toldo'],
+      patrones: ['simple', 'dobleBajo', 'bajoAlto', 'altoBajo'],
+      intervalo: [1.8, 2.4],
+    },
+  ],
+
+  // Margen de gracia sobre el tiempo mínimo teórico de cada combo. 1.0
+  // sería "justo al límite"; 1.35 le da al jugador casi medio salto de aire.
+  // Bajarlo hace el juego más exigente; subirlo, más perdonador.
+  MARGEN_COMBO: 1.35,
+
+  // Tiempo de reacción humano que se le concede entre las dos acciones de
+  // un combo, además del margen de arriba.
+  REACCION_COMBO_S: 0.18,
 };
 
 export const TRIVIA = {
