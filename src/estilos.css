@@ -89,19 +89,56 @@ body {
 }
 
 #hud-vidas {
-  position: absolute;
-  top: 3vh;
-  left: 3vw;
   color: var(--error);
   letter-spacing: 0.08em;
 }
 
-/* Nombre del tramo actual, debajo de las vidas */
-.hud-nivel {
+/* Columna izquierda: vidas, insignias de power-up y tramo actual. Apilar
+   TODO en el mismo contenedor (en vez de posicionar cada cosa por separado)
+   es lo que garantiza que nada se encime cuando aparecen insignias. */
+.hud-izquierda {
   position: absolute;
-  top: calc(3vh + 3.2em);
+  top: 3vh;
   left: 3vw;
-  max-width: 40vw;
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.4em;
+  max-width: 44vw;
+}
+
+.hud-estados {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 0.3em;
+}
+
+.hud-estados:empty {
+  display: none;
+}
+
+.hud-estados .insignia {
+  font-size: clamp(24px, 2.4vw, 32px);
+  font-weight: 800;
+  padding: 0.15em 0.55em;
+  border-radius: 0.25em;
+  white-space: nowrap;
+  color: var(--smt-azul-hondo);
+}
+
+.hud-estados .patineta {
+  background: #e0762e; /* naranja municipal, igual que la tabla */
+  color: var(--smt-blanco);
+}
+
+.hud-estados .inmune {
+  background: var(--smt-dorado);
+  animation: pulso 0.7s ease-in-out infinite;
+}
+
+/* Nombre del tramo actual, debajo de las insignias */
+.hud-nivel {
   font-size: clamp(22px, 2.2vw, 30px);
   font-weight: 700;
   color: var(--smt-blanco);
@@ -113,6 +150,17 @@ body {
 
 .hud-nivel:empty {
   display: none;
+}
+
+/* En pantallas angostas (celular en vertical) el enunciado de la trivia
+   ocupa casi todo el ancho de arriba y taparía las vidas. Mientras hay
+   pregunta, el HUD izquierdo baja por debajo de la placa. En 16:9 —el caso
+   del proyector— sobra el ancho y no se toca nada. */
+@media (max-width: 900px) {
+  #hud.con-placa .hud-izquierda {
+    top: 30vh;
+    transition: top 0.25s ease;
+  }
 }
 
 .hud-derecha {

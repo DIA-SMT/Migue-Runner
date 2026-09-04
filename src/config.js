@@ -108,6 +108,12 @@ export const PALETA = {
   BANDERIN_B: 0xf7f9fb, // blanco patrio
   TOLDO_A: 0xc0453b,
   TOLDO_B: 0xf2e3c9,
+
+  // Power-ups
+  PATINETA_TABLA: 0xe0762e, // naranja municipal, se ve desde lejos
+  PATINETA_LIJA: 0x2f353a,
+  PATINETA_RUEDA: 0xf7f9fb,
+  HALO_INMUNE: 0xffd75e, // halo dorado de la empanada
 };
 
 export const MUNDO = {
@@ -376,6 +382,38 @@ export const COLECCIONABLES = {
   LINEA_ALTURA: 1.05,
 
   PROBABILIDAD_ARCO: 0.55, // el resto son líneas bajas
+};
+
+export const POWERUPS = {
+  // Comunes a los dos
+  Z_SPAWN: -170,
+  Z_FUERA: 1.8, // se retiran antes de la cámara (z≈4.2), como los soles
+  RADIO_TOMA: 0.9, // generoso: son premios, no desafíos de precisión
+  GIRO: 1.8, // vueltas por segundo, para que se noten
+  POOL: 3, // de cada tipo; nunca hay más de uno o dos en vuelo
+
+  // Patineta: escudo + puntos dobles. Al chocar o errar una pregunta se
+  // pierde LA PATINETA en lugar de una vida, así perderla es el castigo.
+  PATINETA: {
+    INTERVALO_MIN_S: 16,
+    INTERVALO_MAX_S: 26,
+    ALTURA: 0.42, // flota bajita: se agarra corriendo, sin puntería
+    MULTIPLICADOR_PUNTOS: 2,
+    FACTOR_VELOCIDAD: 1.12, // apenas más rápido, para que se sienta
+    // Altura de la tabla bajo los pies (sólo visual, la hitbox no cambia:
+    // llevar patineta no debe alterar qué obstáculos se pueden franquear).
+    ALTURA_TABLA: 0.07,
+  },
+
+  // Empanada: inmunidad total por unos segundos.
+  EMPANADA: {
+    INTERVALO_MIN_S: 20,
+    INTERVALO_MAX_S: 32,
+    ALTURA: 1.15, // a la altura del pecho, se agarra corriendo
+    DURACION_S: 3,
+    // Pulso del halo mientras dura la inmunidad.
+    PULSO_HZ: 6,
+  },
 };
 
 export const JUICE = {

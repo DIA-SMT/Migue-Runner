@@ -11,8 +11,14 @@
 
     <!-- HUD de partida -->
     <div id="hud" class="oculto">
-      <div id="hud-vidas" class="hud-placa"></div>
-      <div id="hud-nivel" class="hud-nivel"></div>
+      <!-- Columna izquierda: vidas, insignias de power-up y tramo actual.
+           Todo dentro del mismo contenedor apilado para que nada se
+           superponga por más insignias que haya. -->
+      <div class="hud-izquierda">
+        <div id="hud-vidas" class="hud-placa"></div>
+        <div id="hud-estados" class="hud-estados"></div>
+        <div id="hud-nivel" class="hud-nivel"></div>
+      </div>
       <div class="hud-derecha">
         <div id="hud-puntaje" class="hud-placa">0</div>
         <div id="hud-soles" class="hud-soles">☀ 0</div>

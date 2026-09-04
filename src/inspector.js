@@ -4,8 +4,9 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { PALETA, OBSTACULOS, JUGADOR, SALTO } from './config.js';
+import { PALETA, OBSTACULOS, JUGADOR, SALTO, POWERUPS } from './config.js';
 import { PIEZAS_POR_TIPO } from './obstaculos.js';
+import { piezasPatineta, piezasEmpanada } from './powerups.js';
 import { fusionarPiezas } from './geometria.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
@@ -68,6 +69,18 @@ for (const tipo of tipos) {
   escena.add(cajaColision);
 
   puntosEtiqueta.push({ x, tipo, clase: t.clase });
+  x += 5;
+}
+
+// Power-ups, a continuación de los obstáculos y a su altura de vuelo real.
+for (const [tipo, piezas, altura] of [
+  ['patineta', piezasPatineta(), POWERUPS.PATINETA.ALTURA],
+  ['empanada', piezasEmpanada(), POWERUPS.EMPANADA.ALTURA],
+]) {
+  const malla = new THREE.Mesh(fusionarPiezas(piezas), material);
+  malla.position.set(x, altura, 0);
+  escena.add(malla);
+  puntosEtiqueta.push({ x, tipo, clase: 'power-up' });
   x += 5;
 }
 

@@ -63,6 +63,40 @@ export function crearAudio() {
       }
     },
 
+    // Patineta agarrada: arpegio ascendente más largo que el del sol.
+    patineta() {
+      try {
+        nota(392, 0, 0.08, 'square');
+        nota(523, 0.07, 0.08, 'square');
+        nota(659, 0.14, 0.08, 'square');
+        nota(784, 0.21, 0.2, 'square');
+      } catch {
+        /* sin audio, sin drama */
+      }
+    },
+
+    // Patineta perdida: el mismo arpegio al revés, en sierra.
+    perderPatineta() {
+      try {
+        nota(659, 0, 0.09, 'sawtooth');
+        nota(494, 0.08, 0.09, 'sawtooth');
+        nota(330, 0.16, 0.18, 'sawtooth');
+      } catch {
+        /* sin audio, sin drama */
+      }
+    },
+
+    // Empanada: campanita cálida, distinta de todo lo demás.
+    empanada() {
+      try {
+        nota(880, 0, 0.12, 'triangle');
+        nota(1109, 0.1, 0.12, 'triangle');
+        nota(1319, 0.2, 0.28, 'triangle');
+      } catch {
+        /* sin audio, sin drama */
+      }
+    },
+
     // Golpe o respuesta incorrecta: descenso seco.
     golpe() {
       try {

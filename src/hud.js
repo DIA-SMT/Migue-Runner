@@ -9,6 +9,7 @@ const $ = (selector) => document.querySelector(selector);
 
 export function crearHud() {
   const vidas = $('#hud-vidas');
+  const estados = $('#hud-estados');
   const nivel = $('#hud-nivel');
   const puntaje = $('#hud-puntaje');
   const soles = $('#hud-soles');
@@ -33,6 +34,7 @@ export function crearHud() {
       juegoHud.classList.add('oculto');
       pregunta.classList.add('oculto');
       feedback.classList.add('oculto');
+      juegoHud.classList.remove('con-placa'); // no dejarla pegada al cambiar de pantalla
     },
 
     mostrarJuego() {
@@ -41,6 +43,7 @@ export function crearHud() {
       juegoHud.classList.remove('oculto');
       pregunta.classList.add('oculto');
       feedback.classList.add('oculto');
+      juegoHud.classList.remove('con-placa'); // no dejarla pegada al cambiar de pantalla
       ultimoPuntaje = -1;
     },
 
@@ -51,6 +54,7 @@ export function crearHud() {
       juegoHud.classList.add('oculto');
       pregunta.classList.add('oculto');
       feedback.classList.add('oculto');
+      juegoHud.classList.remove('con-placa'); // no dejarla pegada al cambiar de pantalla
 
       const puntajeFinal = Math.floor(datos.puntaje);
       $('#resultado-puntaje').textContent = String(puntajeFinal);
@@ -111,19 +115,44 @@ export function crearHud() {
       nivel.textContent = nombre;
     },
 
+    // Insignias de los power-ups activos.
+    //
+    // Sin emoji a propósito: 🛹 y 🥟 se dibujan borrosos y ambiguos con la
+    // fuente de emoji de Windows (la patineta se ve como una cápsula), y en
+    // un proyector eso es ilegible. La palabra más el color de fondo
+    // (naranja de la tabla, dorado de la empanada) identifican mejor.
+    actualizarEstados(partida) {
+      const insignias = [];
+      if (partida.patineta) {
+        insignias.push('<span class="insignia patineta">PATINETA · PUNTOS ×2</span>');
+      }
+      if (partida.inmunidad > 0) {
+        const seg = Math.ceil(partida.inmunidad);
+        insignias.push(`<span class="insignia inmune">INMUNE ${seg}s</span>`);
+      }
+      estados.innerHTML = insignias.join('');
+    },
+
     // --------- Trivia ---------
+    // `con-placa` avisa al CSS que hay una placa grande ocupando la franja
+    // de arriba (el enunciado o el resultado de la respuesta). En pantallas
+    // angostas eso taparía las vidas, así que el HUD izquierdo baja
+    // mientras dure. En un proyector 16:9 sobra el ancho y no se mueve nada.
     mostrarPregunta(texto) {
       pregunta.textContent = texto;
       pregunta.classList.remove('oculto');
+      juegoHud.classList.add('con-placa');
     },
 
     ocultarPregunta() {
       pregunta.classList.add('oculto');
+      if (feedback.classList.contains('oculto')) juegoHud.classList.remove('con-placa');
     },
 
     // tipo: 'ok' | 'error' | 'neutro'
     mostrarFeedback(tipo, titulo, dato) {
       feedback.className = `feedback-${tipo}`;
+      juegoHud.classList.add('con-placa');
       feedback.innerHTML = '';
       const t = document.createElement('strong');
       t.textContent = titulo;
@@ -137,6 +166,7 @@ export function crearHud() {
 
     ocultarFeedback() {
       feedback.classList.add('oculto');
+      if (pregunta.classList.contains('oculto')) juegoHud.classList.remove('con-placa');
     },
 
     // Festejo argento: placa dorada que aparece y se va sola (animación CSS).

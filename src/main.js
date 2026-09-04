@@ -22,6 +22,7 @@ import {
   OBSTACULOS,
   FRASES,
   COLECCIONABLES,
+  POWERUPS,
   JUICE,
 } from './config.js';
 import { crearMundo } from './world.js';
@@ -31,6 +32,7 @@ import { crearAudio } from './audio.js';
 import { crearObstaculos } from './obstaculos.js';
 import { crearDificultad } from './dificultad.js';
 import { crearColeccionables } from './coleccionables.js';
+import { crearPowerups } from './powerups.js';
 import { crearParticulas } from './particulas.js';
 import { crearPortal } from './portals.js';
 import { cargarPreguntas } from './quiz.js';
@@ -120,6 +122,11 @@ const coleccionables = crearColeccionables(escena, {
   zonaOcupada: (z, margen) => obstaculos.hayCerca(z, margen),
 });
 
+// Los power-ups tampoco: un premio dentro de un cartel sería inalcanzable.
+const powerups = crearPowerups(escena, {
+  zonaOcupada: (z, margen) => obstaculos.hayCerca(z, margen),
+});
+
 let jugador = null;
 crearPersonajes(escena).then((resultado) => {
   jugador = resultado;
@@ -165,6 +172,8 @@ const partida = {
   distancia: 0,
   tiempo: 0,
   invulnerable: 0, // segundos restantes de invulnerabilidad tras un golpe
+  inmunidad: 0, // segundos restantes de inmunidad por empanada
+  patineta: false, // ¿va en patineta? (escudo + puntos dobles)
   proximaTrivia: TRIVIA.INTERVALO_S * 0.6, // la primera pregunta llega antes
   feedbackTimer: 0,
   esquivados: 0, // obstáculos superados (para los festejos)
@@ -186,8 +195,42 @@ function fraseAlAzar() {
 // Altura aproximada del torso del personaje, para nacer las partículas ahí.
 const ALTURA_IMPACTO = 0.9;
 
-function perderVida() {
-  if (partida.invulnerable > 0) return;
+// `conAviso` es false cuando el golpe vino de la trivia: ahí la placa ya
+// está mostrando cuál era la respuesta correcta y no hay que taparla.
+function perderPatineta(conAviso) {
+  partida.patineta = false;
+  jugador?.ponerPatineta(false);
+  hud.actualizarEstados(partida);
+  audio.perderPatineta();
+  sacudir(JUICE.SACUDIDA_GOLPE);
+  // La patineta sale volando en pedazos naranjas.
+  particulas.estallar(0, 0.25, 0, JUICE.PARTICULAS_GOLPE, PALETA.PATINETA_TABLA, 3);
+  if (conAviso) {
+    hud.mostrarFeedback('neutro', '¡Perdiste la patineta!', '');
+    partida.feedbackTimer = 1.6;
+  } else {
+    hud.mostrarFrase('¡Chau patineta!');
+  }
+}
+
+// `fuente`: 'obstaculo' o 'trivia'.
+//
+// Orden de resolución, de más protector a menos:
+//  1. Inmunidad de empanada: no pasa nada, venga de donde venga.
+//  2. Ventana post-golpe: sólo protege de obstáculos (existe para no comer
+//     dos golpes del mismo objeto), nunca de una respuesta equivocada.
+//  3. Patineta: absorbe el daño y se pierde, la vida queda intacta.
+//  4. Recién ahí se pierde una vida.
+function recibirDano(fuente) {
+  if (partida.inmunidad > 0) return;
+  if (fuente === 'obstaculo' && partida.invulnerable > 0) return;
+
+  if (partida.patineta) {
+    perderPatineta(fuente === 'obstaculo');
+    partida.invulnerable = OBSTACULOS.INVULNERABLE_S;
+    return;
+  }
+
   partida.vidas--;
   partida.invulnerable = OBSTACULOS.INVULNERABLE_S;
   hud.actualizarVidas(partida.vidas);
@@ -196,6 +239,23 @@ function perderVida() {
   sacudir(JUICE.SACUDIDA_GOLPE);
   particulas.estallar(0, ALTURA_IMPACTO, 0, JUICE.PARTICULAS_GOLPE, PALETA.VALLA_NARANJA, 2);
   if (partida.vidas <= 0) estados.cambiar('RESULTADO');
+}
+
+function juntarPowerup(tipo) {
+  if (tipo === 'patineta') {
+    partida.patineta = true;
+    jugador?.ponerPatineta(true);
+    audio.patineta();
+    hud.mostrarFrase('¡A la patineta!');
+    particulas.estallar(0, 0.3, 0, JUICE.PARTICULAS_SOL * 2, PALETA.PATINETA_TABLA, 1);
+  } else {
+    partida.inmunidad = POWERUPS.EMPANADA.DURACION_S;
+    jugador?.ponerInmune(true);
+    audio.empanada();
+    hud.mostrarFrase('¡Empanada tucumana!');
+    particulas.estallar(0, ALTURA_IMPACTO, 0, JUICE.PARTICULAS_SOL * 2, PALETA.EMPANADA, 1);
+  }
+  hud.actualizarEstados(partida);
 }
 
 function resolverCruce(cruce) {
@@ -219,7 +279,7 @@ function resolverCruce(cruce) {
     partida.racha = 0;
     const correcta = pregunta.correcta === 'arriba' ? pregunta.opcionArriba : pregunta.opcionAbajo;
     hud.mostrarFeedback('error', `Era: ${correcta}`, pregunta.dato ?? '');
-    perderVida();
+    recibirDano('trivia');
   }
   hud.actualizarRacha(partida.racha);
   partida.feedbackTimer = TRIVIA.DATO_S;
@@ -245,6 +305,7 @@ const estados = crearEstados({
       dificultad.reiniciar();
       obstaculos.reiniciar();
       coleccionables.reiniciar();
+      powerups.reiniciar();
       particulas.limpiar();
     },
     actualizar(dt) {
@@ -266,6 +327,8 @@ const estados = crearEstados({
         distancia: 0,
         tiempo: 0,
         invulnerable: 0,
+        inmunidad: 0,
+        patineta: false,
         proximaTrivia: TRIVIA.INTERVALO_S * 0.6,
         feedbackTimer: 0,
         esquivados: 0,
@@ -277,25 +340,39 @@ const estados = crearEstados({
       dificultad.reiniciar();
       obstaculos.reiniciar(true, MUNDO.VELOCIDAD_INICIAL);
       coleccionables.reiniciar();
+      powerups.reiniciar();
       particulas.limpiar();
       portal.descartar();
       hud.mostrarJuego();
       hud.actualizarVidas(partida.vidas);
       hud.actualizarSoles(0);
       hud.actualizarRacha(0);
+      hud.actualizarEstados(partida);
       hud.actualizarNivel(dificultad.nivel.nombre);
       audio.iniciarMusica(); // hay gesto del usuario: el autoplay no molesta
     },
     actualizar(dt) {
-      // Velocidad y distancia
+      // Velocidad base creciente; la patineta le suma un empujón.
       partida.velocidad = Math.min(MUNDO.VELOCIDAD_MAX, partida.velocidad + MUNDO.ACELERACION * dt);
-      partida.tiempo += dt;
-      partida.distancia += partida.velocidad * dt;
-      partida.puntaje += partida.velocidad * dt * JUEGO.PUNTOS_POR_METRO;
+      const velocidad = partida.patineta
+        ? partida.velocidad * POWERUPS.PATINETA.FACTOR_VELOCIDAD
+        : partida.velocidad;
 
-      mundo.actualizar(dt, partida.velocidad);
-      jugador?.actualizar(dt, 'correr', partida.velocidad);
-      particulas.actualizar(dt, partida.velocidad);
+      partida.tiempo += dt;
+      partida.distancia += velocidad * dt;
+      const multiplicador = partida.patineta ? POWERUPS.PATINETA.MULTIPLICADOR_PUNTOS : 1;
+      partida.puntaje += velocidad * dt * JUEGO.PUNTOS_POR_METRO * multiplicador;
+
+      // Inmunidad de la empanada
+      if (partida.inmunidad > 0) {
+        partida.inmunidad = Math.max(0, partida.inmunidad - dt);
+        if (partida.inmunidad === 0) jugador?.ponerInmune(false);
+        hud.actualizarEstados(partida);
+      }
+
+      mundo.actualizar(dt, velocidad);
+      jugador?.actualizar(dt, 'correr', velocidad);
+      particulas.actualizar(dt, velocidad);
 
       // Dificultad: cada nivel habilita obstáculos y combos nuevos.
       const nivelNuevo = dificultad.revisarAscenso(partida.distancia);
@@ -314,8 +391,8 @@ const estados = crearEstados({
 
       if (jugador) {
         // Obstáculos
-        const eventos = obstaculos.actualizar(dt, partida.velocidad, jugador);
-        if (eventos.colision) perderVida();
+        const eventos = obstaculos.actualizar(dt, velocidad, jugador);
+        if (eventos.colision) recibirDano('obstaculo');
         partida.esquivados += eventos.esquivados;
         // Festejo argento cada tantos obstáculos superados
         if (partida.esquivados >= partida.proximoFestejo) {
@@ -325,10 +402,10 @@ const estados = crearEstados({
         }
 
         // Soles de la ciudad
-        const juntados = coleccionables.actualizar(dt, partida.velocidad, jugador);
+        const juntados = coleccionables.actualizar(dt, velocidad, jugador);
         if (juntados > 0) {
           partida.soles += juntados;
-          partida.puntaje += juntados * COLECCIONABLES.VALOR;
+          partida.puntaje += juntados * COLECCIONABLES.VALOR * multiplicador;
           hud.actualizarSoles(partida.soles, true);
           audio.sol();
           particulas.estallar(
@@ -340,6 +417,11 @@ const estados = crearEstados({
             1,
           );
         }
+
+        // Patineta y empanada
+        for (const tipo of powerups.actualizar(dt, velocidad, jugador)) {
+          juntarPowerup(tipo);
+        }
       }
 
       // Trivia: programación del portal
@@ -347,19 +429,21 @@ const estados = crearEstados({
       if (partida.proximaTrivia <= 0 && quiz && !portal.estaActivo()) {
         const pregunta = quiz.proxima();
         hud.mostrarPregunta(pregunta.enunciado);
-        const distanciaPortal = partida.velocidad * TRIVIA.AVISO_S;
+        const distanciaPortal = velocidad * TRIVIA.AVISO_S;
         portal.lanzar(pregunta, distanciaPortal);
         obstaculos.suprimir(TRIVIA.AVISO_S + TRIVIA.SUPRESION_OBSTACULOS_S);
-        obstaculos.despejarCerca(-distanciaPortal, partida.velocidad * 1.5);
-        // Los soles tampoco: el portal necesita la pista despejada para que
-        // la elección de respuesta sea la única cosa que importe ahí.
-        coleccionables.despejarCerca(-distanciaPortal, partida.velocidad * 1.5);
+        obstaculos.despejarCerca(-distanciaPortal, velocidad * 1.5);
+        // Los soles y los power-ups tampoco: el portal necesita la pista
+        // despejada para que la elección de respuesta sea lo único que
+        // importe ahí.
+        coleccionables.despejarCerca(-distanciaPortal, velocidad * 1.5);
+        powerups.despejarCerca(-distanciaPortal, velocidad * 1.5);
         partida.proximaTrivia = TRIVIA.INTERVALO_S;
       }
 
       // Trivia: cruce del portal
       if (jugador) {
-        const cruce = portal.actualizar(dt, partida.velocidad, jugador);
+        const cruce = portal.actualizar(dt, velocidad, jugador);
         if (cruce) resolverCruce(cruce);
       }
 
@@ -372,7 +456,11 @@ const estados = crearEstados({
       hud.actualizarPuntaje(partida.puntaje);
     },
     salir() {
-      if (jugador) jugador.objeto.visible = true;
+      if (jugador) {
+        jugador.objeto.visible = true;
+        // Que no quede el halo dorado prendido en el resultado.
+        jugador.ponerInmune(false);
+      }
     },
   },
 

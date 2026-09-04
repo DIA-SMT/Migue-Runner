@@ -31,6 +31,7 @@ npm run build
 - [x] **Mobile**: controles táctiles de dos zonas (mitad de arriba/abajo de la pantalla), gestos del navegador anulados (zoom, scroll, selección, menú de mantener apretado) y HUD responsive probado en 375×812.
 - [x] **Soles de la ciudad**: coleccionables que suman puntos, en dos patrones — arco a la altura del salto (hay que saltar: el pico queda fuera del alcance corriendo) y línea baja (se junta corriendo, se pierde si vas agachado). Nunca aparecen encima de un obstáculo ni sobre un portal de trivia.
 - [x] **Impacto y récord**: sacudida de cámara, chispas instanciadas y viñeta roja al chocar; récord de la máquina en `localStorage` (`migue.record`) con "¡Récord nuevo!" y mensaje de cierre según puntaje.
+- [x] **Power-ups**: la **patineta** (puntos ×2 y algo más de velocidad) y la **empanada** (inmunidad 3 s). Ver la tabla de daño más abajo.
 
 > Estados implementados: `ATRACCIÓN → JUGANDO → RESULTADO → (vuelve solo a ATRACCIÓN a los 15 s)`. La CALIBRACIÓN se suma en la Fase 2.
 
@@ -60,6 +61,26 @@ Para inspeccionar qué códigos emite un puntero desconocido, sin calibrar nada:
 2. Enchufar el puntero presentador USB.
 3. Apretar cada botón: el `event.code` aparece gigante en pantalla, con historial, marca de auto-repeat y tiempo entre eventos.
 4. Anotar qué código emite el botón "adelante" y el "atrás" del modelo concreto (varía por marca: `PageDown`/`PageUp`, flechas, `Space`, etc.).
+
+## Power-ups y cómo se pierde
+
+Se juntan corriendo, sin necesidad de saltar, y nunca aparecen encima de un obstáculo ni sobre un portal de trivia.
+
+- **🛹 Patineta**: puntos ×2 y un empujón de velocidad. **Funciona de escudo**: al chocar o errar una pregunta se pierde la patineta *en lugar de* una vida.
+- **🥟 Empanada**: inmunidad total por 3 segundos, con halo dorado a los pies.
+
+La empanada **power-up** flota, gira y brilla; el **puesto** de empanadas es un obstáculo de madera, en el piso y quieto. Son cosas distintas a propósito.
+
+Orden en que se resuelve el daño (`recibirDano()` en [`src/main.js`](src/main.js)), de más protector a menos:
+
+| Estado | Choque | Errar pregunta |
+|---|---|---|
+| Empanada activa | nada | nada |
+| Ventana tras un golpe | nada | **pierde vida** |
+| Con patineta | pierde patineta | pierde patineta |
+| Sin nada | pierde vida | pierde vida |
+
+La ventana posterior a un golpe existe para no comer dos veces el mismo obstáculo, así que **no** protege de una respuesta equivocada: son eventos distintos. Los valores están en `POWERUPS` de [`src/config.js`](src/config.js).
 
 ## Ajustar la dificultad
 

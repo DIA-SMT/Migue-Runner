@@ -12,7 +12,9 @@
 import * as THREE from 'three';
 import { GLTFLoader } from 'three/addons/loaders/GLTFLoader.js';
 import { MeshoptDecoder } from 'three/addons/libs/meshopt_decoder.module.js';
-import { JUGADOR, SALTO, AGACHADA } from './config.js';
+import { JUGADOR, SALTO, AGACHADA, PALETA, POWERUPS } from './config.js';
+import { fusionarPiezas } from './geometria.js';
+import { piezasPatineta } from './powerups.js';
 
 // Placeholder por si un .glb no carga (nunca romper la escena por un asset).
 function crearPlaceholder(altura) {
@@ -78,8 +80,34 @@ export async function crearPersonajes(escena) {
   raiz.rotation.x = JUGADOR.INCLINACION;
   escena.add(raiz);
 
+  // Patineta bajo los pies. Va en la raíz (no en el contenedor) para que la
+  // agachada no la achate junto con el personaje. Es sólo visual: la hitbox
+  // no cambia al llevarla, así que los mismos obstáculos se franquean igual.
+  const patineta = new THREE.Mesh(
+    fusionarPiezas(piezasPatineta()),
+    new THREE.MeshStandardMaterial({ vertexColors: true, roughness: 0.8 }),
+  );
+  patineta.castShadow = true;
+  patineta.visible = false;
+  raiz.add(patineta);
+
+  // Halo de inmunidad de la empanada: anillo dorado que pulsa a los pies.
+  const halo = new THREE.Mesh(
+    new THREE.TorusGeometry(0.62, 0.07, 6, 20),
+    new THREE.MeshBasicMaterial({
+      color: new THREE.Color(PALETA.HALO_INMUNE).multiplyScalar(1.8), // florece con el bloom
+      toneMapped: false,
+    }),
+  );
+  halo.rotation.x = Math.PI / 2;
+  halo.position.y = 0.1;
+  halo.visible = false;
+  raiz.add(halo);
+
   const modelos = { migue, chanbachi };
   let elegido = 'migue';
+  let enPatineta = false;
+  let inmune = false;
 
   // ----- Estado físico -----
   let saltoY = 0;
@@ -109,6 +137,13 @@ export async function crearPersonajes(escena) {
     }
   }
 
+  // La patineta levanta al personaje la altura de la tabla, para que no se
+  // vea hundido en ella.
+  function acomodarPorPatineta() {
+    patineta.visible = enPatineta;
+    contenedor.position.y = enPatineta ? POWERUPS.PATINETA.ALTURA_TABLA : 0;
+  }
+
   modoAtraccion();
 
   return {
@@ -120,6 +155,19 @@ export async function crearPersonajes(escena) {
     },
     elegido: () => elegido,
     modoAtraccion,
+
+    // --- Power-ups (sólo estado visual; los efectos de juego los aplica
+    // main.js, y la hitbox no cambia en ningún caso) ---
+    ponerPatineta(valor) {
+      enPatineta = valor;
+      acomodarPorPatineta();
+    },
+    tienePatineta: () => enPatineta,
+
+    ponerInmune(valor) {
+      inmune = valor;
+      halo.visible = valor;
+    },
 
     saltar() {
       if (enAire() || agachadoActivo()) return false;
@@ -153,10 +201,14 @@ export async function crearPersonajes(escena) {
       agachadoDeseado = false;
       agachadoDesde = -Infinity;
       squashRestante = 0;
+      enPatineta = false;
+      inmune = false;
       contenedor.scale.set(1, 1, 1);
       raiz.position.y = 0;
       raiz.rotation.set(JUGADOR.INCLINACION, 0, 0);
       raiz.visible = true;
+      halo.visible = false;
+      acomodarPorPatineta();
       modoJuego();
     },
 
@@ -209,12 +261,19 @@ export async function crearPersonajes(escena) {
       let cabeceo = 0;
       if (!enAire()) {
         if (modo === 'correr' && !agachado) {
-          const frecuencia =
-            JUGADOR.BOB_FRECUENCIA_BASE + JUGADOR.BOB_FRECUENCIA_POR_VELOCIDAD * velocidad;
-          tiempoBob += dt * frecuencia;
-          bob = Math.abs(Math.sin(tiempoBob)) * JUGADOR.BOB_AMPLITUD;
-          balanceo = Math.sin(tiempoBob) * JUGADOR.BOB_BALANCEO;
-          cabeceo = Math.sin(tiempoBob * 2) * JUGADOR.BOB_CABECEO;
+          if (enPatineta) {
+            // En patineta los pies van fijos a la tabla: no hay zancada,
+            // sólo un balanceo suave de andar rodando.
+            tiempoBob += dt * 3.2;
+            balanceo = Math.sin(tiempoBob) * JUGADOR.BOB_BALANCEO * 0.7;
+          } else {
+            const frecuencia =
+              JUGADOR.BOB_FRECUENCIA_BASE + JUGADOR.BOB_FRECUENCIA_POR_VELOCIDAD * velocidad;
+            tiempoBob += dt * frecuencia;
+            bob = Math.abs(Math.sin(tiempoBob)) * JUGADOR.BOB_AMPLITUD;
+            balanceo = Math.sin(tiempoBob) * JUGADOR.BOB_BALANCEO;
+            cabeceo = Math.sin(tiempoBob * 2) * JUGADOR.BOB_CABECEO;
+          }
         } else if (modo === 'idle') {
           tiempoBob += dt * JUGADOR.IDLE_FRECUENCIA;
           bob = Math.abs(Math.sin(tiempoBob)) * JUGADOR.IDLE_AMPLITUD;
@@ -224,6 +283,16 @@ export async function crearPersonajes(escena) {
       raiz.position.y = saltoY + bob;
       raiz.rotation.z = balanceo;
       raiz.rotation.x += (inclinacionObjetivo + cabeceo - raiz.rotation.x) * Math.min(1, 14 * dt);
+
+      // La patineta acompaña el salto pero no la agachada, y gira apenas
+      // con el balanceo para que no se vea rígida.
+      if (enPatineta) patineta.rotation.z = -balanceo * 0.5;
+
+      // El halo pulsa mientras dura la inmunidad.
+      if (inmune) {
+        const p = 1 + Math.sin(relojInterno * Math.PI * 2 * POWERUPS.EMPANADA.PULSO_HZ) * 0.12;
+        halo.scale.set(p, p, p);
+      }
     },
   };
 }

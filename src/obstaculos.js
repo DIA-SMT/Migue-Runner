@@ -113,9 +113,12 @@ function piezasEmpanadas() {
     cuerpo.rotateY(i * 0.7);
     cuerpo.translate(p.x, p.y, p.z);
     piezas.push({ geometria: cuerpo, color: PALETA.EMPANADA });
-    // Repulgue: un aro finito al borde, más tostado.
-    const repulgue = new THREE.TorusGeometry(0.13, 0.022, 4, 8, Math.PI);
-    repulgue.rotateY(Math.PI / 2 + i * 0.7);
+    // Repulgue por el borde curvo. Un TorusGeometry nace en el plano XY,
+    // que es el que se ve de frente: no hay que rotarlo hacia el costado o
+    // queda cruzando la empanada por el medio.
+    const repulgue = new THREE.TorusGeometry(0.14, 0.022, 4, 10, Math.PI);
+    repulgue.scale(1, 0.62, 0.78); // sigue la forma del cuerpo
+    repulgue.rotateZ(-0.12);
     repulgue.translate(p.x, p.y + 0.01, p.z);
     piezas.push({ geometria: repulgue, color: PALETA.EMPANADA_TOSTADA });
   }
