@@ -4,11 +4,12 @@
 
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
-import { PALETA, OBSTACULOS, JUGADOR, SALTO, POWERUPS } from './config.js';
+import { PALETA, OBSTACULOS, JUGADOR, SALTO, POWERUPS, XR } from './config.js';
 import { PIEZAS_POR_TIPO } from './obstaculos.js';
 import { piezasPatineta, piezasEmpanada } from './powerups.js';
 import { fusionarPiezas } from './geometria.js';
 import { crearHud3d } from './hud3d.js';
+import { crearPlaca3d } from './panel3d.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -112,6 +113,33 @@ if (new URLSearchParams(location.search).get('hud') === '1') {
     hud3d.mostrarPregunta('¿En qué año se fundó San Miguel de Tucumán?');
     hud3d.mostrarFrase('¡Buena changoooo!');
   }
+  // Con &diag=1 se agrega también el panel de diagnóstico de VR, para
+  // revisar que entre y se lea sin necesidad del visor.
+  if (new URLSearchParams(location.search).get('diag') === '1') {
+    const c = XR.DIAG;
+    const placa = crearPlaca3d({
+      ancho: c.ancho,
+      alto: c.alto,
+      pixelesPorUnidad: XR.PIXELES_POR_METRO,
+    });
+    placa.malla.position.set(c.x, c.y, c.z);
+    placa.malla.rotation.y = c.giro;
+    placa.malla.visible = true;
+    rig.add(placa.malla);
+    placa.escribir(
+      [
+        { texto: 'DIAGNÓSTICO', color: '#4FA3D1', escala: 0.32 },
+        { texto: 'mandos: 2   fps: 72', escala: 0.28, peso: 700 },
+        { texto: 'gatillo SI   grip SI', escala: 0.28, peso: 700 },
+        { texto: 'botones: 4,5', escala: 0.26, peso: 500 },
+        { texto: 'ejes: 0.0,0.0,0.0,-0.9', escala: 0.26, peso: 500 },
+        { texto: 'giro del cuerpo: -137°', escala: 0.26, peso: 500 },
+        { texto: 'sin errores de JS', color: '#7fd6a4', escala: 0.26, peso: 700 },
+      ],
+      { borde: 'ninguno', alineado: 'izquierda' },
+    );
+  }
+
   // La cámara se pone donde estaría la cabeza del jugador, mirando al
   // frente, para ver los paneles como los vería en el visor. ?z= permite
   // echarse un poco atrás y ver el conjunto de una.

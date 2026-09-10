@@ -110,6 +110,8 @@ Los paneles se cuelgan del **rig** del jugador, no de la cámara: pegados a la c
 
 Para revisar los paneles sin visor: `/inspector.html?hud=1`, con `&pantalla=atraccion|juego|resultado` y `&z=3.5` para echarse atrás.
 
+Si algo no funciona dentro del visor, agregar **?diag=1** a la URL suma un panel de diagnostico ahi mismo: dice cuantos mandos detecta, que boton esta apretado en ese momento (con TODOS los indices, no solo los mapeados), como quedo el recentrado, los fps y si hubo errores de JavaScript. Existe porque desde una notebook no hay forma de ver que pasa adentro del casco.
+
 > ⚠️ **Sin probar en un visor real.** Se verificó que la interfaz esté completa, que ninguna de las 16 llamadas tire excepción y que los paneles se lean bien, pero nadie se puso todavía un Quest. **El mareo es el riesgo abierto**: un runner mueve el mundo sin que la persona lo controle, y eso descompone a parte del público. Hay que probarlo con gente antes de ponerlo en el stand. Si molesta, en `XR` de [`src/config.js`](src/config.js) se puede cerrar más la viñeta (`VINETA_ANGULO`, `VINETA_OPACIDAD`) o bajar la velocidad del mundo.
 
 ## Power-ups y cómo se pierde

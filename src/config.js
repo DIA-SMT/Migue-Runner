@@ -222,6 +222,13 @@ export const XR = {
   // pixela enseguida.
   PIXELES_POR_METRO: 512,
 
+  // Panel de diagnóstico, sólo con ?diag=1 en la URL. Existe porque desde
+  // una notebook no se puede ver lo que pasa dentro del visor: muestra ahí
+  // mismo si detecta los mandos, qué botón está apretado, cómo quedó el
+  // recentrado y si hubo errores de JavaScript.
+  DIAG: { x: 0.95, y: 1.15, z: -2.2, ancho: 0.9, alto: 0.62, giro: -0.38, orden: 104 },
+  DIAG_CADA_CUADROS: 6, // cada cuántos cuadros se repinta
+
   // Botones de los mandos del visor, mapeo 'xr-standard'.
   // El gatillo (0) y el grip (1) llegan por los eventos 'select' y
   // 'squeeze' de la sesión, así que acá van sólo los de pulgar: 4 = A/X,

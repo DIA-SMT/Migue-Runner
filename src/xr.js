@@ -19,6 +19,76 @@
 
 import * as THREE from 'three';
 import { XR } from './config.js';
+import { crearPlaca3d, COLORES_PANEL } from './panel3d.js';
+
+// --- Panel de diagnóstico (sólo con ?diag=1) ---
+//
+// Existe por una limitación concreta: desde una notebook no hay forma de
+// ver qué pasa dentro del visor. Este panel muestra ahí mismo si el juego
+// detecta los mandos, qué botón está apretado, cómo quedó el recentrado y
+// si hubo errores de JavaScript, para que la persona que tiene el casco lo
+// lea y lo pueda contar.
+function crearDiagnostico(rig) {
+  const c = XR.DIAG;
+  const placa = crearPlaca3d({
+    ancho: c.ancho,
+    alto: c.alto,
+    pixelesPorUnidad: XR.PIXELES_POR_METRO,
+  });
+  placa.malla.position.set(c.x, c.y, c.z);
+  placa.malla.rotation.y = c.giro;
+  placa.malla.renderOrder = c.orden;
+  placa.malla.visible = true;
+  rig.add(placa.malla);
+
+  // Los errores de JS son lo primero que se querría saber y lo único que
+  // no se puede deducir mirando: se juntan acá para mostrarlos en el panel.
+  const errores = [];
+  window.addEventListener('error', (e) => {
+    if (errores.length < 3) errores.push(String(e.message ?? e).slice(0, 60));
+  });
+  window.addEventListener('unhandledrejection', (e) => {
+    if (errores.length < 3) errores.push(String(e.reason?.message ?? e.reason).slice(0, 60));
+  });
+
+  let cuadros = 0;
+  let ultimoTiempo = performance.now();
+  let fps = 0;
+
+  return {
+    // `datos` lo arma el módulo de XR con lo que sabe de la sesión.
+    actualizar(datos) {
+      cuadros++;
+      const ahora = performance.now();
+      if (ahora - ultimoTiempo >= 500) {
+        fps = Math.round((cuadros * 1000) / (ahora - ultimoTiempo));
+        cuadros = 0;
+        ultimoTiempo = ahora;
+      }
+      if (cuadros % XR.DIAG_CADA_CUADROS !== 0) return;
+
+      placa.escribir(
+        [
+          { texto: 'DIAGNÓSTICO', color: COLORES_PANEL.celeste, escala: 0.32 },
+          // Separador visible: el ajuste de línea colapsa los espacios
+          // múltiples, así que dos datos en un renglón quedaban pegados.
+          { texto: `mandos: ${datos.mandos} · fps: ${fps}`, escala: 0.28, peso: 700 },
+          { texto: `gatillo: ${datos.gatillo} · grip: ${datos.grip}`, escala: 0.28, peso: 700 },
+          { texto: `botones: ${datos.botones || '-'}`, escala: 0.26, peso: 500 },
+          { texto: `ejes: ${datos.ejes}`, escala: 0.26, peso: 500 },
+          { texto: `giro del cuerpo: ${datos.giro}°`, escala: 0.26, peso: 500 },
+          {
+            texto: errores.length ? `ERROR: ${errores[0]}` : 'sin errores de JS',
+            color: errores.length ? COLORES_PANEL.error : COLORES_PANEL.ok,
+            escala: 0.26,
+            peso: 700,
+          },
+        ],
+        { borde: 'ninguno', alineado: 'izquierda' },
+      );
+    },
+  };
+}
 
 // --- Viñeta de confort ---
 //
@@ -109,6 +179,10 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   // confort necesita para funcionar.
   camara.add(vineta);
 
+  // Panel de diagnóstico, sólo si la URL lo pide.
+  const pideDiag = new URLSearchParams(location.search).get('diag') === '1';
+  const diagnostico = pideDiag ? crearDiagnostico(rig) : null;
+
   function pintarBoton(texto, habilitado) {
     if (!boton) return;
     boton.textContent = texto;
@@ -138,8 +212,16 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   // botones que no tienen evento propio, session.inputSources[].gamepad.
   function conectarMandos(sesion) {
     // 'select' es el gatillo y 'squeeze' el grip, en los dos mandos.
-    sesion.addEventListener('selectstart', () => acciones.saltar?.());
-    sesion.addEventListener('squeezestart', () => acciones.agacharse?.());
+    // El informe deja constancia de que el evento llegó, así el panel de
+    // diagnóstico distingue "el botón no hace nada" de "el evento no llega".
+    sesion.addEventListener('selectstart', () => {
+      informe.gatillo = 'SI';
+      acciones.saltar?.();
+    });
+    sesion.addEventListener('squeezestart', () => {
+      informe.grip = 'SI';
+      acciones.agacharse?.();
+    });
     sesion.addEventListener('squeezeend', () => acciones.soltarAgacharse?.());
   }
 
@@ -148,6 +230,8 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   // dispare una sola vez.
   let saltarAntes = false;
   let agacharAntes = false;
+  // Lo último que reportaron los mandos, para el panel de diagnóstico.
+  const informe = { mandos: 0, gatillo: '-', grip: '-', botones: '', ejes: '-', giro: '0' };
 
   function revisarMandos() {
     const sesion = renderer.xr.getSession();
@@ -155,6 +239,10 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
 
     let saltar = false;
     let agachar = false;
+    const apretados = [];
+    const ejes = [];
+    informe.mandos = sesion.inputSources.length;
+
     for (const fuente of sesion.inputSources) {
       const mando = fuente.gamepad;
       if (!mando) continue;
@@ -165,7 +253,17 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
       const eje = mando.axes[XR.EJE_VERTICAL] ?? 0;
       if (eje < -XR.UMBRAL_EJE) saltar = true;
       if (eje > XR.UMBRAL_EJE) agachar = true;
+
+      // Para el diagnóstico se registran TODOS los botones y ejes, no sólo
+      // los mapeados: si el Quest usa otros índices, así se ve cuáles.
+      mando.buttons.forEach((b, i) => {
+        if (b.pressed) apretados.push(i);
+      });
+      ejes.push(mando.axes.map((a) => a.toFixed(1)).join(','));
     }
+
+    informe.botones = apretados.join(',');
+    informe.ejes = ejes.join(' | ') || '-';
 
     if (saltar && !saltarAntes) acciones.saltar?.();
     if (agachar && !agacharAntes) acciones.agacharse?.();
@@ -236,6 +334,10 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
         recentrarRig(rig, camara);
       }
       revisarMandos();
+      if (diagnostico) {
+        informe.giro = ((rig.rotation.y * 180) / Math.PI).toFixed(0);
+        diagnostico.actualizar(informe);
+      }
     },
 
     // Para volver a orientar la escena a mano si alguien se corrió de lugar.
