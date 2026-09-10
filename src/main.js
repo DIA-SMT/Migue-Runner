@@ -37,6 +37,8 @@ import { crearParticulas } from './particulas.js';
 import { crearPortal } from './portals.js';
 import { cargarPreguntas } from './quiz.js';
 import { crearHud } from './hud.js';
+import { crearHud3d } from './hud3d.js';
+import { crearXR } from './xr.js';
 import { crearCalibracion } from './calibracion.js';
 import { crearEstados } from './states.js';
 
@@ -60,6 +62,14 @@ const escena = new THREE.Scene();
 const camara = new THREE.PerspectiveCamera(CAMARA.FOV, window.innerWidth / window.innerHeight, 0.1, 1000);
 camara.position.set(CAMARA.POSICION.x, CAMARA.POSICION.y, CAMARA.POSICION.z);
 camara.lookAt(CAMARA.MIRA.x, CAMARA.MIRA.y, CAMARA.MIRA.z);
+
+// Rig del jugador: un grupo que contiene la cámara y representa el cuerpo.
+// En pantalla plana queda en el origen, así que la cámara mantiene su
+// posición y su comportamiento de siempre. En una sesión de VR el visor
+// pasa a controlar la cámara y el rig es lo que se posiciona en la escena.
+const rig = new THREE.Group();
+rig.add(camara);
+escena.add(rig);
 
 const luzCalida = new THREE.DirectionalLight(PALETA.LUZ_CALIDA, LUCES.CALIDA_INTENSIDAD);
 luzCalida.position.set(7, 12, 5);
@@ -96,8 +106,21 @@ composer.addPass(new OutputPass());
 // Contenido y sistemas
 // ---------------------------------------------------------------------------
 const mundo = crearMundo(escena);
-const hud = crearHud();
 const audio = crearAudio();
+
+// Dos HUD con la MISMA interfaz de 16 métodos: el de DOM (pantalla plana,
+// el de siempre) y el de paneles 3D (sesión inmersiva, donde el DOM no se
+// ve). `hud` es un proxy que reenvía cada llamada al que esté activo, así
+// que el resto del juego no sabe ni le importa en qué modo está corriendo.
+const hudDom = crearHud();
+const hud3d = crearHud3d(rig);
+let hudActivo = hudDom;
+const hud = new Proxy(
+  {},
+  {
+    get: (_, metodo) => (...args) => hudActivo[metodo]?.(...args),
+  },
+);
 const dificultad = crearDificultad();
 const obstaculos = crearObstaculos(escena, dificultad);
 const particulas = crearParticulas(escena);
@@ -115,6 +138,46 @@ calibracion = crearCalibracion({
     console.info('Puntero calibrado:', capturas);
   },
 });
+
+// Sesión de VR inmersiva. Si el navegador no la soporta, este módulo no
+// hace nada visible: el botón se crea sólo cuando hay VR de verdad, así que
+// en la notebook del stand y en el celular nada cambia.
+const xr = crearXR({
+  renderer,
+  rig,
+  alEntrar() {
+    hudDom.mostrarAtraccion(); // deja el DOM en un estado limpio detrás
+    hudActivo = hud3d;
+    hud3d.activar(true);
+    renderer.shadowMap.enabled = false; // el visor pide 90 fps por ojo
+    repintarPantallaActual();
+  },
+  alSalir() {
+    hud3d.activar(false);
+    hudActivo = hudDom;
+    renderer.shadowMap.enabled = true;
+    ajustarCamara(); // vuelve al tamaño de ventana y al FOV de pantalla
+    repintarPantallaActual();
+  },
+});
+
+// Al cambiar de HUD hay que volver a pintar la pantalla del estado actual,
+// porque el HUD nuevo arranca en blanco.
+function repintarPantallaActual() {
+  if (estados.actual === 'JUGANDO') {
+    hud.mostrarJuego();
+    hud.actualizarVidas(partida.vidas);
+    hud.actualizarSoles(partida.soles);
+    hud.actualizarRacha(partida.racha);
+    hud.actualizarEstados(partida);
+    hud.actualizarNivel(dificultad.nivel.nombre);
+  } else if (estados.actual === 'RESULTADO') {
+    hud.mostrarResultado(partida);
+  } else {
+    hud.mostrarAtraccion();
+    hud.actualizarRecordAtraccion(leerRecord());
+  }
+}
 
 // Los soles no aparecen encima de un obstáculo: un arco a la altura del
 // salto dentro de un cartel colgante sería una trampa, no un desafío.
@@ -561,6 +624,11 @@ let tiempoTotal = 0;
 let camaraZ = CAMARA.POSICION.z;
 
 function aplicarSacudida(dt) {
+  // En VR NO se toca la cámara: la controla el visor, y mover el punto de
+  // vista sin que la persona lo haya movido es de las causas más directas
+  // de malestar. El golpe ya se comunica con sonido y partículas.
+  if (xr.estaEnVR()) return;
+
   // Decaimiento exponencial: el temblor arranca fuerte y se apaga solo.
   // La Z base es la que calculó ajustarCamara(): en pantallas angostas la
   // cámara se aleja, y la sacudida tiene que respetar esa posición.
@@ -585,10 +653,19 @@ function cuadro() {
   estados.actualizar(dt);
   entrada.revisarGamepad(); // mandos del Quest y joysticks
   aplicarSacudida(dt);
-  composer.render();
-  requestAnimationFrame(cuadro);
+
+  // El EffectComposer (que aporta el bloom) no soporta WebXR: en una
+  // sesión inmersiva hay que dibujar a los framebuffers del dispositivo,
+  // uno por ojo. Así que en VR se renderiza directo y sin bloom, y en
+  // pantalla plana sigue pasando por el composer como siempre.
+  if (xr.estaEnVR()) renderer.render(escena, camara);
+  else composer.render();
 }
-requestAnimationFrame(cuadro);
+
+// setAnimationLoop en vez de requestAnimationFrame: es lo que three.js
+// necesita para manejar el bucle del visor. Fuera de VR usa rAF por
+// dentro, así que el comportamiento en pantalla plana no cambia.
+renderer.setAnimationLoop(cuadro);
 
 // ---------------------------------------------------------------------------
 // Adaptación al formato de pantalla

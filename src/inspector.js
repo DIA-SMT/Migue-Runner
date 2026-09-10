@@ -8,6 +8,7 @@ import { PALETA, OBSTACULOS, JUGADOR, SALTO, POWERUPS } from './config.js';
 import { PIEZAS_POR_TIPO } from './obstaculos.js';
 import { piezasPatineta, piezasEmpanada } from './powerups.js';
 import { fusionarPiezas } from './geometria.js';
+import { crearHud3d } from './hud3d.js';
 
 const renderer = new THREE.WebGLRenderer({ antialias: true });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, 1.5));
@@ -82,6 +83,40 @@ for (const [tipo, piezas, altura] of [
   escena.add(malla);
   puntosEtiqueta.push({ x, tipo, clase: 'power-up' });
   x += 5;
+}
+
+// Con ?hud=1 se monta el HUD de realidad virtual en un rig, con datos de
+// ejemplo, para revisar los paneles sin necesidad de un visor.
+if (new URLSearchParams(location.search).get('hud') === '1') {
+  const rig = new THREE.Group();
+  escena.add(rig);
+  const hud3d = crearHud3d(rig);
+  const partida = {
+    puntaje: 1234, vidas: 2, soles: 7, racha: 3, aciertos: 4, totalPreguntas: 6,
+    distancia: 850, tiempo: 62, patineta: true, inmunidad: 2.4, esRecord: true,
+  };
+  const pantalla = new URLSearchParams(location.search).get('pantalla') ?? 'juego';
+  hud3d.activar(true);
+  if (pantalla === 'atraccion') {
+    hud3d.mostrarAtraccion();
+  } else if (pantalla === 'resultado') {
+    hud3d.mostrarResultado(partida);
+  } else {
+    hud3d.mostrarJuego();
+    hud3d.actualizarVidas(2);
+    hud3d.actualizarPuntaje(1234);
+    hud3d.actualizarSoles(7);
+    hud3d.actualizarRacha(3);
+    hud3d.actualizarNivel('Hora pico en el centro');
+    hud3d.actualizarEstados(partida);
+    hud3d.mostrarPregunta('¿En qué año se fundó San Miguel de Tucumán?');
+    hud3d.mostrarFrase('¡Buena changoooo!');
+  }
+  // La cámara se pone donde estaría la cabeza del jugador, mirando al
+  // frente, para ver los paneles como los vería en el visor. ?z= permite
+  // echarse un poco atrás y ver el conjunto de una.
+  camara.position.set(0, 1.6, Number(new URLSearchParams(location.search).get('z') ?? 0));
+  controles.target.set(0, 1.8, -3.6);
 }
 
 // Líneas de referencia: altura del salto y techo de la hitbox agachada.

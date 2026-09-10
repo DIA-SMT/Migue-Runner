@@ -175,6 +175,22 @@ export const CAMARA = {
   Z_MAX: 6.6,
 };
 
+export const XR = {
+  // Dónde queda el cuerpo del jugador dentro de la escena: en el mismo
+  // lugar que la cámara de pantalla plana, detrás de Migue. La altura la
+  // aporta la persona (el origen 'local-floor' está en el piso real).
+  RIG_Z: 4.6,
+
+  // Viñeta de confort: un cono oscuro que recorta la visión periférica
+  // mientras el mundo se mueve. Es la mitigación estándar del mareo por
+  // movimiento automático, que es el riesgo real de un runner en VR.
+  // Subir la opacidad o cerrar el ángulo marea menos pero tapa más.
+  VINETA_ACTIVA: true,
+  VINETA_RADIO: 3,
+  VINETA_ANGULO: 0.85, // radianes de casquete recortado arriba y abajo
+  VINETA_OPACIDAD: 0.82,
+};
+
 export const GAMEPAD = {
   // Mandos de Oculus Quest y joysticks comunes. Se cubren los dos mapeos
   // porque los botones no coinciden entre ellos:

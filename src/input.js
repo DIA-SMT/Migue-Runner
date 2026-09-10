@@ -135,6 +135,10 @@ export function crearEntrada({ bloqueado = () => false } = {}) {
     (evento) => {
       if (bloqueado()) return;
       if (evento.pointerType === 'mouse' && evento.button !== 0) return;
+      // Un toque sobre un control de la interfaz (hoy el botón de VR) no es
+      // una acción de juego. Sin esto, tocar ese botón haría saltar al
+      // personaje además de abrir la sesión.
+      if (evento.target?.closest?.('button, a, input')) return;
       const accion = evento.clientY < window.innerHeight / 2 ? 'saltar' : 'agacharse';
       punterosActivos.set(evento.pointerId, accion);
       disparar(accion);

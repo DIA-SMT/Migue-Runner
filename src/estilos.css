@@ -776,3 +776,32 @@ body {
 .diagnostico .instruccion b {
   color: var(--smt-dorado);
 }
+
+/* ---------- Botón de VR inmersiva ---------- */
+/* xr.js lo agrega al DOM SOLO si el navegador soporta VR inmersiva, así que
+   en la notebook del stand y en el celular no existe. */
+#boton-vr {
+  position: fixed;
+  bottom: var(--borde-y);
+  right: var(--borde-x);
+  z-index: 20;
+  font-family: inherit;
+  font-size: var(--txt-base);
+  font-weight: 800;
+  color: var(--smt-azul-hondo);
+  background: var(--smt-dorado);
+  border: none;
+  border-radius: 0.3em;
+  padding: 0.5em 1em;
+  cursor: pointer;
+  /* El resto del HUD es pointer-events:none para que los toques lleguen al
+     juego; este botón sí tiene que recibirlos. */
+  pointer-events: auto;
+  box-shadow: 0 4px 16px rgba(0, 0, 0, 0.4);
+}
+
+#boton-vr:disabled {
+  background: color-mix(in srgb, var(--smt-azul-hondo) 80%, transparent);
+  color: var(--smt-celeste);
+  cursor: default;
+}

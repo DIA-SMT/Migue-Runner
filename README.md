@@ -90,7 +90,27 @@ Probado en proyector 1080p, tablet (los dos giros), celular (los dos giros) y el
 
 En el **navegador del Quest** funcionan las dos cosas: apuntar con el mando y apretar el gatillo cuenta como toque en la zona a la que apuntás, y los botones andan sin apuntar a ningún lado. La pantalla de espera detecta el mando (`gamepadconnected`) y muestra los botones correctos en vez de las teclas.
 
-> El Quest se soporta como **navegador**, no en VR inmersiva (WebXR). Ver "Qué falta" al final.
+## VR inmersiva (WebXR) en el Quest
+
+Hay dos modos y **el de pantalla plana es el default**: el botón «Entrar en VR» aparece abajo a la derecha sólo si el navegador soporta VR inmersiva, así que en la notebook del stand y en el celular no existe.
+
+Lo que cambia adentro de la sesión, y por qué:
+
+| | Pantalla plana | VR inmersiva |
+|---|---|---|
+| HUD | HTML sobre el canvas | paneles 3D ([`src/hud3d.js`](src/hud3d.js)) |
+| Bloom | sí | no — el `EffectComposer` de three.js no soporta XR |
+| Sombras | sí | no — el visor pide 90 fps por ojo |
+| Sacudida al chocar | sí | no — mover el punto de vista sin que la persona lo mueva marea |
+| Viñeta de confort | no | sí — recorta la visión periférica mientras el mundo avanza |
+
+**Los dos HUD implementan la misma interfaz de 16 métodos.** [`src/main.js`](src/main.js) habla con un proxy que reenvía cada llamada al que esté activo, así que la lógica del juego no sabe en qué modo corre y no hubo que tocarla. Si mañana se agrega un método al HUD, hay que agregarlo en los dos.
+
+Los paneles se cuelgan del **rig** del jugador, no de la cámara: pegados a la cámara te persiguen la mirada, que en VR es incómodo; colgados del rig quedan quietos respecto al cuerpo y se miran girando la cabeza.
+
+Para revisar los paneles sin visor: `/inspector.html?hud=1`, con `&pantalla=atraccion|juego|resultado` y `&z=3.5` para echarse atrás.
+
+> ⚠️ **Sin probar en un visor real.** Se verificó que la interfaz esté completa, que ninguna de las 16 llamadas tire excepción y que los paneles se lean bien, pero nadie se puso todavía un Quest. **El mareo es el riesgo abierto**: un runner mueve el mundo sin que la persona lo controle, y eso descompone a parte del público. Hay que probarlo con gente antes de ponerlo en el stand. Si molesta, en `XR` de [`src/config.js`](src/config.js) se puede cerrar más la viñeta (`VINETA_ANGULO`, `VINETA_OPACIDAD`) o bajar la velocidad del mundo.
 
 ## Power-ups y cómo se pierde
 
@@ -148,4 +168,4 @@ Los modelos 3D originales (Migue ~50 MB, Chanbachi 4.3 MB), la música original 
 - **Probar la calibración con el puntero real.** El flujo está verificado con códigos típicos, y los del puntero del municipio ya andan sin calibrar.
 - **Prueba en proyector.**
 - **Tipografía embebida.** Hoy usa la del sistema; el requisito offline pide una familia incrustada localmente.
-- **VR inmersiva (WebXR) en el Quest.** Hoy el Quest se soporta como navegador. Entrar en modo inmersivo es un cambio de fondo, no un ajuste: todo el HUD vive en DOM sobre el canvas y en VR el DOM no se ve, así que habría que rehacerlo como paneles 3D; además la cámara la pasaría a controlar el visor, y un runner de carril único con cámara fija en tercera persona es otro juego cuando la cabeza se mueve libre. Es un proyecto aparte, no una fase más.
+- **Probar la VR inmersiva en un visor real**, sobre todo el mareo. Ver la sección de WebXR.
