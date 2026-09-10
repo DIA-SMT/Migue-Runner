@@ -12,33 +12,36 @@
 // cuerpo y se miran girando la cabeza, como mirar un tablero.
 
 import * as THREE from 'three';
-import { JUEGO } from './config.js';
+import { JUEGO, XR } from './config.js';
 import { crearPlaca3d, COLORES_PANEL } from './panel3d.js';
 
 export function crearHud3d(rig) {
-  // --- Paneles ---
+  // Los paneles se arman desde config: posición, tamaño y giro. Ahí está
+  // documentado el criterio de ángulo visual con el que se eligieron.
+  function armar(nombre) {
+    const c = XR.PANELES[nombre];
+    const placa = crearPlaca3d({
+      ancho: c.ancho,
+      alto: c.alto,
+      pixelesPorUnidad: XR.PIXELES_POR_METRO,
+    });
+    placa.malla.position.set(c.x, c.y, c.z);
+    placa.malla.rotation.y = c.giro;
+    placa.malla.renderOrder = c.orden;
+    return placa;
+  }
+
   // Estado: vidas, puntaje, soles y tramo. Arriba a la izquierda, ladeado
   // hacia el jugador para que se lea de frente.
-  const estado = crearPlaca3d({ ancho: 1.6, alto: 0.8 });
-  estado.malla.position.set(-1.5, 2.05, -2.6);
-  estado.malla.rotation.y = 0.45;
-
+  const estado = armar('estado');
   // Insignias de power-up, debajo del estado.
-  const insignias = crearPlaca3d({ ancho: 1.6, alto: 0.28 });
-  insignias.malla.position.set(-1.5, 1.5, -2.6);
-  insignias.malla.rotation.y = 0.45;
-
+  const insignias = armar('insignias');
   // Enunciado de la pregunta y feedback: adelante y arriba, sobre el portal.
-  const aviso = crearPlaca3d({ ancho: 3.2, alto: 1.1 });
-  aviso.malla.position.set(0, 2.7, -4.2);
-
+  const aviso = armar('aviso');
   // Festejos: más cerca y al centro, aparecen y se van.
-  const frase = crearPlaca3d({ ancho: 2.6, alto: 0.5 });
-  frase.malla.position.set(0, 1.25, -3.0);
-
-  // Pantalla grande de sistema: espera, resultado y calibración.
-  const pantalla = crearPlaca3d({ ancho: 3.0, alto: 2.0 });
-  pantalla.malla.position.set(0, 1.8, -3.6);
+  const frase = armar('frase');
+  // Pantalla grande de sistema: espera y resultado.
+  const pantalla = armar('pantalla');
 
   const todos = [estado, insignias, aviso, frase, pantalla];
   for (const p of todos) rig.add(p.malla);

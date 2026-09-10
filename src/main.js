@@ -144,7 +144,17 @@ calibracion = crearCalibracion({
 // en la notebook del stand y en el celular nada cambia.
 const xr = crearXR({
   renderer,
+  camara,
   rig,
+  // Los mandos del visor entran por el MISMO bus que el teclado, el puntero
+  // y el táctil: `entrada.accion()` dispara los mismos oyentes, así que el
+  // ruteo por estado (elegir personaje en la espera, saltar en la partida)
+  // ya funciona sin duplicar nada.
+  acciones: {
+    saltar: () => entrada.accion('saltar'),
+    agacharse: () => entrada.accion('agacharse'),
+    soltarAgacharse: () => entrada.accion('soltarAgacharse'),
+  },
   alEntrar() {
     hudDom.mostrarAtraccion(); // deja el DOM en un estado limpio detrás
     hudActivo = hud3d;
@@ -651,7 +661,8 @@ function cuadro() {
   const dt = Math.min(reloj.getDelta(), 0.05);
   tiempoTotal += dt;
   estados.actualizar(dt);
-  entrada.revisarGamepad(); // mandos del Quest y joysticks
+  entrada.revisarGamepad(); // joysticks en el navegador
+  xr.actualizar(); // mandos del visor y recentrado, sólo dentro de la sesión
   aplicarSacudida(dt);
 
   // El EffectComposer (que aporta el bloom) no soporta WebXR: en una

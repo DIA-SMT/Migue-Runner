@@ -216,6 +216,18 @@ export function crearEntrada({ bloqueado = () => false } = {}) {
     // Se llama después de calibrar, para tomar los códigos nuevos.
     recargarMapa,
     // La Gamepad API se consulta por polling: esto va en el bucle principal.
+    // Sirve para joysticks en el navegador, NO para los mandos dentro de
+    // una sesión de VR (ahí no aparecen en navigator.getGamepads()); de
+    // esos se encarga xr.js llamando a `accion()`.
     revisarGamepad,
+
+    // Entrada desde otra fuente (hoy los mandos del visor). Entra por el
+    // mismo bus que el teclado y el táctil, con el mismo debounce, así que
+    // el ruteo por estado del juego no necesita saber de dónde vino.
+    accion(cual) {
+      if (bloqueado()) return;
+      if (cual === 'soltarAgacharse') soltarAgacharse();
+      else disparar(cual);
+    },
   };
 }

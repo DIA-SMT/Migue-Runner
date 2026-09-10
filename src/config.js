@@ -181,14 +181,56 @@ export const XR = {
   // aporta la persona (el origen 'local-floor' está en el piso real).
   RIG_Z: 4.6,
 
-  // Viñeta de confort: un cono oscuro que recorta la visión periférica
-  // mientras el mundo se mueve. Es la mitigación estándar del mareo por
-  // movimiento automático, que es el riesgo real de un runner en VR.
-  // Subir la opacidad o cerrar el ángulo marea menos pero tapa más.
+  // Viñeta de confort: un plano con degradado radial pegado delante de los
+  // ojos, transparente en el centro y opaco en los bordes. Recorta la
+  // visión periférica mientras el mundo avanza, que es la mitigación
+  // estándar del mareo por movimiento automático.
+  //
+  // Para que moleste menos: subir CENTRO_LIBRE (agranda el agujero) o bajar
+  // OPACIDAD. Para que maree menos: al revés.
   VINETA_ACTIVA: true,
-  VINETA_RADIO: 3,
-  VINETA_ANGULO: 0.85, // radianes de casquete recortado arriba y abajo
-  VINETA_OPACIDAD: 0.82,
+  VINETA_DISTANCIA: 0.35, // metros delante de los ojos
+  VINETA_LADO: 3.4, // lado del plano, en múltiplos de la distancia
+  VINETA_CENTRO_LIBRE: 0.42, // parte del radio que queda transparente
+  VINETA_OPACIDAD: 0.85,
+
+  // Paneles del HUD en VR: posición en metros respecto al cuerpo del
+  // jugador, tamaño en metros y giro en radianes.
+  //
+  // En VR los tamaños se piensan en ÁNGULO VISUAL, no en píxeles: un panel
+  // de ancho A a distancia D ocupa 2·atan(A/2D) grados de vista. Pasarse de
+  // ~30° cansa (hay que barrer con los ojos para leerlo) y pasarse de ~40°
+  // tapa el juego. La primera versión tenía paneles de 1,6 m a 2,4 m, que
+  // son 37°: demasiado.
+  // `orden` fija el orden de dibujo: todos van encima del mundo, pero entre
+  // ellos el orden tiene que ser determinista o dos paneles que se rozan
+  // parpadean según cuál se dibuje último.
+  //
+  // Las posiciones están separadas EN ÁNGULO, no en metros: el estado
+  // arranca a 15° de azimut, justo donde termina el borde del aviso, así
+  // que no se pisan aunque estén a distancias distintas.
+  PANELES: {
+    estado: { x: -1.02, y: 2.0, z: -2.4, ancho: 0.74, alto: 0.37, giro: 0.33, orden: 102 },
+    insignias: { x: -1.02, y: 1.62, z: -2.4, ancho: 0.74, alto: 0.15, giro: 0.33, orden: 102 },
+    aviso: { x: 0, y: 2.5, z: -4.2, ancho: 1.9, alto: 0.66, giro: 0, orden: 101 },
+    frase: { x: 0, y: 1.15, z: -3.0, ancho: 1.35, alto: 0.28, giro: 0, orden: 103 },
+    pantalla: { x: 0, y: 1.75, z: -3.6, ancho: 2.0, alto: 1.35, giro: 0, orden: 100 },
+  },
+
+  // Resolución de las texturas del HUD. Más alto que en pantalla plana
+  // porque en el visor los paneles se miran de cerca y el texto chico se
+  // pixela enseguida.
+  PIXELES_POR_METRO: 512,
+
+  // Botones de los mandos del visor, mapeo 'xr-standard'.
+  // El gatillo (0) y el grip (1) llegan por los eventos 'select' y
+  // 'squeeze' de la sesión, así que acá van sólo los de pulgar: 4 = A/X,
+  // 5 = B/Y. Están aparte de GAMEPAD porque el mapeo del visor no es el
+  // mismo que el de un joystick de consola.
+  BOTONES_SALTAR: [4],
+  BOTONES_AGACHARSE: [5],
+  EJE_VERTICAL: 3, // palanca del mando derecho en xr-standard
+  UMBRAL_EJE: 0.6,
 };
 
 export const GAMEPAD = {
