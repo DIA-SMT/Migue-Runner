@@ -28,7 +28,7 @@ npm run build
 - [x] **Fase 6 — Modelo de Migue**: `.glb` optimizado de 47.7 MB → 1.45 MB (decimado a ~100k triángulos, textura WebP 1024, compresión meshopt). No trae animaciones: carrera simulada con bobbing procedural, como prevé el documento.
 - [x] **Fase 7 — Arte y ambiente**: el **centro de San Miguel de Tucumán** — peatonal de baldosas con guarda roja, casas coloniales de pasteles, **Casa Histórica** y **Catedral** como hitos reconocibles, lapachos en flor, faroles, cerros del Aconquija de fondo, sol con bloom, niebla `FogExp2`. Cada banda de edificios es una sola malla fusionada (~15 draw calls en total).
 - [ ] Fase 8 — Pulido de stand: **falta la prueba en proyector**. Ya están la atracción, el auto-reset de 15 s y la pantalla completa (tecla **F**); sigue pendiente incrustar la tipografía definitiva (hoy usa la fuente del sistema).
-- [x] **Mobile**: controles táctiles de dos zonas (mitad de arriba/abajo de la pantalla), gestos del navegador anulados (zoom, scroll, selección, menú de mantener apretado) y HUD responsive probado en 375×812.
+- [x] **Mobile, tablet y Oculus Quest**: controles táctiles de dos zonas, soporte de mandos, cámara que se adapta al formato de pantalla y HUD escalado con `vmin`. Ver la sección de formatos más abajo.
 - [x] **Soles de la ciudad**: coleccionables que suman puntos, en dos patrones — arco a la altura del salto (hay que saltar: el pico queda fuera del alcance corriendo) y línea baja (se junta corriendo, se pierde si vas agachado). Nunca aparecen encima de un obstáculo ni sobre un portal de trivia.
 - [x] **Impacto y récord**: sacudida de cámara, chispas instanciadas y viñeta roja al chocar; récord de la máquina en `localStorage` (`migue.record`) con "¡Récord nuevo!" y mensaje de cierre según puntaje.
 - [x] **Power-ups**: la **patineta** (puntos ×2 y algo más de velocidad) y la **empanada** (inmunidad 3 s). Ver la tabla de daño más abajo.
@@ -61,6 +61,36 @@ Para inspeccionar qué códigos emite un puntero desconocido, sin calibrar nada:
 2. Enchufar el puntero presentador USB.
 3. Apretar cada botón: el `event.code` aparece gigante en pantalla, con historial, marca de auto-repeat y tiempo entre eventos.
 4. Anotar qué código emite el botón "adelante" y el "atrás" del modelo concreto (varía por marca: `PageDown`/`PageUp`, flechas, `Space`, etc.).
+
+## Formatos de pantalla
+
+Probado en proyector 1080p, tablet (los dos giros), celular (los dos giros) y el navegador del Quest.
+
+**La cámara se adapta al formato.** El FOV de una cámara en perspectiva es *vertical*: con un valor fijo, cuanto más angosta la pantalla, menos mundo se ve **a lo ancho**. En un celular en vertical entraban 2 unidades de ancho y el portal de trivia mide 4.2 — se cortaba, y no se podían leer las dos opciones. No era un detalle estético: era el juego roto en vertical.
+
+`ajustarCamara()` en [`src/main.js`](src/main.js) garantiza un ancho mínimo visible: primero abre el FOV, y si con el tope no alcanza, aleja la cámara. En 16:9 (el proyector) no se activa nada.
+
+| Formato | Antes | Ahora |
+|---|---|---|
+| Proyector 1080p | 7.8 | 7.8 (sin cambios) |
+| Tablet horizontal | 5.8 | 5.8 (sin cambios) |
+| Tablet vertical | 3.3 ✂️ | 4.4 (FOV 70°) |
+| Celular vertical | 2.0 ✂️ | 4.4 (FOV 74° + cámara más atrás) |
+
+**El HUD se mide en `vmin`,** no en `vw`. Los tokens `--txt-*` de [`src/estilos.css`](src/estilos.css) son la única fuente de tamaños. `vmin` toma el lado más corto de la pantalla, que es justo el que escasea: con `vw`, un celular acostado (mucho ancho, poquísimo alto) hacía que el HUD se comiera la pantalla. La regla del documento —nada por debajo de 32 px en 1080p— se cumple por el tope de cada token.
+
+**Controles por dispositivo:**
+
+| Dispositivo | Saltar | Agacharse |
+|---|---|---|
+| Puntero USB | botón adelante | botón atrás |
+| Teclado | Espacio · ⬆ · ➡ | Shift · ⬇ · ⬅ |
+| Táctil | tocar la mitad de arriba | tocar la mitad de abajo |
+| Quest / joystick | gatillo · A/X · palanca arriba | grip · B/Y · palanca abajo |
+
+En el **navegador del Quest** funcionan las dos cosas: apuntar con el mando y apretar el gatillo cuenta como toque en la zona a la que apuntás, y los botones andan sin apuntar a ningún lado. La pantalla de espera detecta el mando (`gamepadconnected`) y muestra los botones correctos en vez de las teclas.
+
+> El Quest se soporta como **navegador**, no en VR inmersiva (WebXR). Ver "Qué falta" al final.
 
 ## Power-ups y cómo se pierde
 
@@ -112,3 +142,10 @@ Los modelos 3D originales (Migue ~50 MB, Chanbachi 4.3 MB), la música original 
 - `public/audio/musica.mp3`: "Por la Ciudad" de La Vela Puerca — **la Municipalidad declara contar con autorización de uso**. Si esa autorización no cubre la publicación en la web pública, reemplazar por una pista propia o libre antes del evento.
 
 > ⚠️ **Paleta institucional**: los tokens de color en [`src/estilos.css`](src/estilos.css) son una propuesta de trabajo. Antes de publicar, pedir el manual de identidad oficial a la Municipalidad y reemplazar los valores (un cambio de una línea por color).
+
+## Qué falta
+
+- **Probar la calibración con el puntero real.** El flujo está verificado con códigos típicos, y los del puntero del municipio ya andan sin calibrar.
+- **Prueba en proyector.**
+- **Tipografía embebida.** Hoy usa la del sistema; el requisito offline pide una familia incrustada localmente.
+- **VR inmersiva (WebXR) en el Quest.** Hoy el Quest se soporta como navegador. Entrar en modo inmersivo es un cambio de fondo, no un ajuste: todo el HUD vive en DOM sobre el canvas y en VR el DOM no se ve, así que habría que rehacerlo como paneles 3D; además la cámara la pasaría a controlar el visor, y un runner de carril único con cámara fija en tercera persona es otro juego cuando la cabeza se mueve libre. Es un proyecto aparte, no una fase más.

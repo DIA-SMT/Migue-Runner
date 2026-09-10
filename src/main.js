@@ -556,19 +556,24 @@ window.addEventListener('keydown', (evento) => {
 // ---------------------------------------------------------------------------
 const reloj = new THREE.Clock();
 let tiempoTotal = 0;
+// Z base de la cámara. La fija ajustarCamara() según el formato de pantalla
+// (en vertical se aleja para que el portal entre a lo ancho).
+let camaraZ = CAMARA.POSICION.z;
 
 function aplicarSacudida(dt) {
   // Decaimiento exponencial: el temblor arranca fuerte y se apaga solo.
+  // La Z base es la que calculó ajustarCamara(): en pantallas angostas la
+  // cámara se aleja, y la sacudida tiene que respetar esa posición.
   sacudida *= Math.exp(-JUICE.SACUDIDA_AMORTIGUACION * dt);
   if (sacudida < 0.001) {
     sacudida = 0;
-    camara.position.set(CAMARA.POSICION.x, CAMARA.POSICION.y, CAMARA.POSICION.z);
+    camara.position.set(CAMARA.POSICION.x, CAMARA.POSICION.y, camaraZ);
   } else {
     const fase = tiempoTotal * JUICE.SACUDIDA_FRECUENCIA;
     camara.position.set(
       CAMARA.POSICION.x + Math.sin(fase * 1.7) * sacudida,
       CAMARA.POSICION.y + Math.cos(fase * 2.3) * sacudida,
-      CAMARA.POSICION.z,
+      camaraZ,
     );
   }
   camara.lookAt(CAMARA.MIRA.x, CAMARA.MIRA.y, CAMARA.MIRA.z);
@@ -578,6 +583,7 @@ function cuadro() {
   const dt = Math.min(reloj.getDelta(), 0.05);
   tiempoTotal += dt;
   estados.actualizar(dt);
+  entrada.revisarGamepad(); // mandos del Quest y joysticks
   aplicarSacudida(dt);
   composer.render();
   requestAnimationFrame(cuadro);
@@ -585,11 +591,44 @@ function cuadro() {
 requestAnimationFrame(cuadro);
 
 // ---------------------------------------------------------------------------
-// Resize
+// Adaptación al formato de pantalla
 // ---------------------------------------------------------------------------
-window.addEventListener('resize', () => {
-  camara.aspect = window.innerWidth / window.innerHeight;
+// Ancho de mundo visible a una distancia dada, con un FOV vertical dado.
+// El FOV de three es vertical, así que el ancho depende del aspect.
+function anchoVisible(fovGrados, distancia, aspect) {
+  return 2 * distancia * Math.tan((fovGrados * Math.PI) / 360) * aspect;
+}
+
+function ajustarCamara() {
+  const aspect = window.innerWidth / window.innerHeight;
+  camara.aspect = aspect;
+
+  let fov = CAMARA.FOV;
+  camaraZ = CAMARA.POSICION.z;
+
+  // ¿Entra el portal a lo ancho? Si no, se abre el FOV; si con el tope
+  // sigue sin entrar, se aleja la cámara. En 16:9 nada de esto se activa.
+  if (anchoVisible(fov, camaraZ, aspect) < CAMARA.ANCHO_MINIMO) {
+    // Despejando fov de: ancho = 2·z·tan(fov/2)·aspect
+    const tanNecesaria = CAMARA.ANCHO_MINIMO / (2 * camaraZ * aspect);
+    fov = Math.min(CAMARA.FOV_MAX, (Math.atan(tanNecesaria) * 360) / Math.PI);
+
+    if (anchoVisible(fov, camaraZ, aspect) < CAMARA.ANCHO_MINIMO) {
+      // Y despejando z del mismo despeje, ya con el FOV en su tope.
+      const zNecesaria =
+        CAMARA.ANCHO_MINIMO / (2 * Math.tan((fov * Math.PI) / 360) * aspect);
+      camaraZ = Math.min(CAMARA.Z_MAX, zNecesaria);
+    }
+  }
+
+  camara.fov = fov;
   camara.updateProjectionMatrix();
   renderer.setSize(window.innerWidth, window.innerHeight);
   composer.setSize(window.innerWidth, window.innerHeight);
-});
+}
+
+ajustarCamara();
+window.addEventListener('resize', ajustarCamara);
+// El Quest y los celulares cambian de orientación sin disparar resize en
+// algunos navegadores; orientationchange lo cubre.
+window.addEventListener('orientationchange', () => setTimeout(ajustarCamara, 100));

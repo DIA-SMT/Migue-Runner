@@ -12,7 +12,7 @@
 // Reglas del documento: preventDefault en códigos mapeados, ignorar
 // event.repeat, debounce de 150 ms, escuchar en window.
 
-import { ENTRADA } from './config.js';
+import { ENTRADA, GAMEPAD as ENTRADA_GAMEPAD } from './config.js';
 
 // `bloqueado` es una función que devuelve true cuando otra pantalla se
 // adueñó de la entrada (hoy: la calibración). No se confía en
@@ -150,6 +150,58 @@ export function crearEntrada({ bloqueado = () => false } = {}) {
   window.addEventListener('pointerup', liberarPuntero, { passive: true });
   window.addEventListener('pointercancel', liberarPuntero, { passive: true });
 
+  // ---------- Mandos (Oculus Quest y joysticks) ----------
+  // La Gamepad API no emite eventos de botón: hay que consultar el estado
+  // en cada cuadro, así que revisarGamepad() se llama desde el bucle
+  // principal. Se mantiene el estado anterior para detectar el flanco
+  // (apretar y soltar) en vez de disparar en cada frame que esté apretado.
+  //
+  // En el navegador del Quest, además, apuntar con el mando y apretar el
+  // gatillo ya genera un pointerdown en el punto donde se apunta, así que
+  // los controles táctiles de dos zonas funcionan sin esto. Los botones son
+  // la alternativa cómoda: no hay que apuntar a ningún lado.
+  let saltarGamepadAntes = false;
+  let agacharGamepadAntes = false;
+
+  // Al conectarse un mando se marca <html class="hay-mando"> para que la
+  // pantalla de espera muestre los botones del mando en vez de las teclas.
+  // En el visor del Quest los mandos aparecen recién al primer movimiento,
+  // así que esto puede activarse después de cargar la página.
+  window.addEventListener('gamepadconnected', () => {
+    document.documentElement.classList.add('hay-mando');
+  });
+
+  function revisarGamepad() {
+    if (bloqueado()) return;
+    const mandos = navigator.getGamepads?.() ?? [];
+    let saltarAhora = false;
+    let agacharAhora = false;
+
+    for (const mando of mandos) {
+      if (!mando) continue;
+      for (const i of ENTRADA_GAMEPAD.BOTONES_SALTAR) {
+        if (mando.buttons[i]?.pressed) saltarAhora = true;
+      }
+      for (const i of ENTRADA_GAMEPAD.BOTONES_AGACHARSE) {
+        if (mando.buttons[i]?.pressed) agacharAhora = true;
+      }
+      // Palanca: arriba salta, abajo agacha. El eje viene invertido
+      // (negativo hacia arriba) en el mapeo estándar.
+      const eje = mando.axes[ENTRADA_GAMEPAD.EJE_VERTICAL] ?? 0;
+      if (eje < -ENTRADA_GAMEPAD.UMBRAL_EJE) saltarAhora = true;
+      if (eje > ENTRADA_GAMEPAD.UMBRAL_EJE) agacharAhora = true;
+    }
+
+    // Flanco de subida: se dispara al apretar, no mientras está apretado.
+    if (saltarAhora && !saltarGamepadAntes) disparar('saltar');
+    if (agacharAhora && !agacharGamepadAntes) disparar('agacharse');
+    // Flanco de bajada de la agachada: hay que soltarla explícitamente.
+    if (!agacharAhora && agacharGamepadAntes) soltarAgacharse();
+
+    saltarGamepadAntes = saltarAhora;
+    agacharGamepadAntes = agacharAhora;
+  }
+
   return {
     // on('saltar' | 'agacharse' | 'soltarAgacharse' | 'cualquiera' |
     //    'calibrar', cb)
@@ -159,5 +211,7 @@ export function crearEntrada({ bloqueado = () => false } = {}) {
     estaAgachadoApretado: () => agachadoApretado,
     // Se llama después de calibrar, para tomar los códigos nuevos.
     recargarMapa,
+    // La Gamepad API se consulta por polling: esto va en el bucle principal.
+    revisarGamepad,
   };
 }

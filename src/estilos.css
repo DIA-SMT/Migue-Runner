@@ -23,6 +23,33 @@
   --cerro-lejos:     #6E7FA0;
   --cerro-cerca:     #4E6B58;
   --tierra:          #A8724A;
+
+  /* ---------- Escala tipográfica del HUD ----------
+     Todo el HUD se mide con estos tokens; no hay tamaños en px sueltos.
+
+     La unidad es vmin (el LADO MÁS CHICO de la pantalla), no vw. Eso es lo
+     que hace que el mismo HUD funcione en un proyector 16:9, un celular
+     vertical y un celular acostado: con vw, un celular acostado tiene
+     mucho ancho y poquísima altura, y el HUD medido en vw se comía la
+     pantalla. Con vmin, manda el lado corto, que es justo el que escasea.
+
+     La regla de legibilidad del documento —nada por debajo de 32 px en un
+     canvas de 1080p— se cumple por el TOPE de cada clamp: en 1080p el lado
+     corto es 1080 y todos los tokens llegan a su máximo, y ese máximo
+     arranca en 32 px incluso para el más chico (la racha, las líneas de
+     ayuda). En una pantalla chica el texto se mira a 30 cm en vez de a 5
+     metros, así que ahí bajar del piso de 32 px no sólo es aceptable: es
+     necesario para que entre. */
+  --txt-chico:   clamp(13px, 3vmin, 32px);
+  --txt-base:    clamp(16px, 3.4vmin, 36px);
+  --txt-medio:   clamp(19px, 3.8vmin, 40px);
+  --txt-grande:  clamp(22px, 4.6vmin, 48px);
+  --txt-titulo:  clamp(28px, 6.4vmin, 72px);
+  --txt-cifra:   clamp(38px, 10vmin, 140px);
+
+  /* Márgenes del HUD contra los bordes de la pantalla. */
+  --borde-x: clamp(8px, 3vmin, 40px);
+  --borde-y: clamp(8px, 3vmin, 40px);
 }
 
 * {
@@ -79,7 +106,7 @@ body {
 
 .hud-placa {
   display: inline-block;
-  font-size: 40px;
+  font-size: var(--txt-medio);
   font-weight: 800;
   padding: 0.15em 0.55em;
   border-radius: 0.25em;
@@ -91,6 +118,9 @@ body {
 #hud-vidas {
   color: var(--error);
   letter-spacing: 0.08em;
+  /* Los tres corazones van SIEMPRE en una línea. Sin esto, en un celular
+     vertical la placa se angosta y quedan "❤❤ / ❤" en dos renglones. */
+  white-space: nowrap;
 }
 
 /* Columna izquierda: vidas, insignias de power-up y tramo actual. Apilar
@@ -98,13 +128,15 @@ body {
    es lo que garantiza que nada se encime cuando aparecen insignias. */
 .hud-izquierda {
   position: absolute;
-  top: 3vh;
-  left: 3vw;
+  top: var(--borde-y);
+  left: var(--borde-x);
   display: flex;
   flex-direction: column;
   align-items: flex-start;
   gap: 0.4em;
-  max-width: 44vw;
+  /* Se deja respirar hasta la mitad de la pantalla, pero nunca tanto como
+     para pisar el puntaje de la derecha. */
+  max-width: min(48vw, 26em);
 }
 
 .hud-estados {
@@ -119,7 +151,7 @@ body {
 }
 
 .hud-estados .insignia {
-  font-size: clamp(24px, 2.4vw, 32px);
+  font-size: var(--txt-base);
   font-weight: 800;
   padding: 0.15em 0.55em;
   border-radius: 0.25em;
@@ -139,7 +171,7 @@ body {
 
 /* Nombre del tramo actual, debajo de las insignias */
 .hud-nivel {
-  font-size: clamp(22px, 2.2vw, 30px);
+  font-size: var(--txt-base);
   font-weight: 700;
   color: var(--smt-blanco);
   background: color-mix(in srgb, var(--smt-azul-hondo) 78%, transparent);
@@ -152,21 +184,23 @@ body {
   display: none;
 }
 
-/* En pantallas angostas (celular en vertical) el enunciado de la trivia
-   ocupa casi todo el ancho de arriba y taparía las vidas. Mientras hay
-   pregunta, el HUD izquierdo baja por debajo de la placa. En 16:9 —el caso
-   del proyector— sobra el ancho y no se toca nada. */
-@media (max-width: 900px) {
+/* En un celular EN VERTICAL el enunciado de la trivia ocupa casi todo el
+   ancho de arriba y taparía las vidas. Mientras hay pregunta, el HUD
+   izquierdo baja por debajo de la placa.
+   Va acotado a `orientation: portrait` a propósito: acostado hay ancho de
+   sobra y el enunciado no llega al HUD, así que bajarlo lo metería en el
+   medio de la pista sin necesidad. En 16:9 tampoco se toca nada. */
+@media (max-width: 900px) and (orientation: portrait) {
   #hud.con-placa .hud-izquierda {
-    top: 30vh;
+    top: 26vh;
     transition: top 0.25s ease;
   }
 }
 
 .hud-derecha {
   position: absolute;
-  top: 3vh;
-  right: 3vw;
+  top: var(--borde-y);
+  right: var(--borde-x);
   text-align: right;
 }
 
@@ -177,12 +211,13 @@ body {
 /* Contador de soles juntados, debajo del puntaje */
 .hud-soles {
   margin-top: 0.25em;
-  font-size: 36px;
+  font-size: var(--txt-base);
   font-weight: 800;
   color: var(--smt-dorado);
   font-variant-numeric: tabular-nums;
   text-shadow: 0 2px 8px rgba(0, 0, 0, 0.6);
   transition: transform 0.12s ease;
+  white-space: nowrap;
 }
 
 /* Se agranda un instante cuando entra un sol (lo aplica hud.js) */
@@ -192,20 +227,21 @@ body {
 
 .hud-racha {
   margin-top: 0.3em;
-  font-size: 32px;
+  font-size: var(--txt-chico);
   font-weight: 700;
   color: var(--smt-dorado);
   text-shadow: 0 2px 6px rgba(0, 0, 0, 0.5);
+  white-space: nowrap;
 }
 
 /* Enunciado de la pregunta: placa grande arriba al centro */
 #hud-pregunta {
   position: absolute;
-  top: 4vh;
+  top: var(--borde-y);
   left: 50%;
   transform: translateX(-50%);
   max-width: min(80vw, 24em);
-  font-size: clamp(32px, 3.4vw, 46px);
+  font-size: var(--txt-grande);
   font-weight: 700;
   line-height: 1.25;
   text-align: center;
@@ -220,14 +256,14 @@ body {
    los obstáculos que vienen por el centro de la pantalla. */
 #hud-feedback {
   position: absolute;
-  top: 4vh;
+  top: var(--borde-y);
   left: 50%;
   transform: translateX(-50%);
-  max-width: min(72vw, 26em);
+  max-width: min(78vw, 26em);
   text-align: center;
   padding: 0.4em 0.9em;
   border-radius: 0.3em;
-  font-size: clamp(32px, 2.8vw, 40px);
+  font-size: var(--txt-medio);
   background: color-mix(in srgb, var(--smt-azul-hondo) 88%, transparent);
 }
 
@@ -270,9 +306,12 @@ body {
   position: absolute;
   top: 56vh;
   left: 50%;
-  font-size: clamp(36px, 4.2vw, 58px);
+  font-size: var(--txt-grande);
   font-weight: 800;
-  white-space: nowrap;
+  /* En una pantalla angosta la frase puede pasar a dos líneas antes que
+     desbordar: se centra igual y no rompe el layout. */
+  max-width: 88vw;
+  text-align: center;
   color: var(--smt-azul-hondo);
   background: var(--smt-dorado);
   padding: 0.2em 0.7em;
@@ -310,7 +349,7 @@ body {
 .hud-titulo h1 {
   display: table;
   margin: 0 auto;
-  font-size: clamp(40px, 6vw, 72px);
+  font-size: var(--txt-titulo);
   font-weight: 800;
   letter-spacing: 0.06em;
   color: var(--smt-blanco);
@@ -323,7 +362,7 @@ body {
 .hud-titulo p {
   display: table;
   margin: 0.6em auto 0;
-  font-size: clamp(20px, 2.4vw, 32px);
+  font-size: var(--txt-base);
   font-weight: 700;
   letter-spacing: 0.18em;
   color: var(--smt-azul-hondo);
@@ -350,7 +389,7 @@ body {
   display: flex;
   justify-content: center;
   gap: 1.2em;
-  font-size: clamp(24px, 2.4vw, 34px);
+  font-size: var(--txt-base);
   font-weight: 700;
 }
 
@@ -374,7 +413,7 @@ body {
 .atraccion-record {
   display: table;
   margin: 0 auto 0.6em;
-  font-size: clamp(24px, 2.6vw, 34px);
+  font-size: var(--txt-base);
   font-weight: 700;
   color: var(--smt-dorado);
   background: color-mix(in srgb, var(--smt-azul-hondo) 82%, transparent);
@@ -390,7 +429,7 @@ body {
 .atraccion-ayuda {
   display: table;
   margin: 0.8em auto 0;
-  font-size: clamp(20px, 2vw, 26px);
+  font-size: var(--txt-chico);
   font-weight: 500;
   color: var(--smt-blanco);
   background: color-mix(in srgb, var(--smt-azul-hondo) 72%, transparent);
@@ -452,7 +491,7 @@ body {
 }
 
 .calibracion-paso {
-  font-size: 32px;
+  font-size: var(--txt-base);
   font-weight: 700;
   letter-spacing: 0.1em;
   text-transform: uppercase;
@@ -460,13 +499,13 @@ body {
 }
 
 .calibracion-icono {
-  font-size: clamp(56px, 9vw, 96px);
+  font-size: var(--txt-titulo);
   line-height: 1.1;
   color: var(--smt-dorado);
 }
 
 .calibracion-placa h2 {
-  font-size: clamp(32px, 4vw, 48px);
+  font-size: var(--txt-grande);
   font-weight: 800;
   line-height: 1.2;
 }
@@ -475,7 +514,7 @@ body {
 .calibracion-capturado {
   margin-top: 0.5em;
   min-height: 1.4em;
-  font-size: clamp(32px, 4.5vw, 54px);
+  font-size: var(--txt-grande);
   font-weight: 800;
   font-family: ui-monospace, "Cascadia Mono", Consolas, monospace;
   color: var(--smt-dorado);
@@ -484,20 +523,23 @@ body {
 
 .calibracion-aviso {
   min-height: 1.4em;
-  font-size: 32px;
+  font-size: var(--txt-base);
   font-weight: 700;
   color: #e8968e;
 }
 
 .calibracion-pie {
   margin-top: 0.8em;
-  font-size: 24px;
+  font-size: var(--txt-chico);
   color: var(--smt-celeste);
 }
 
-/* Dos hints por acción: uno para teclado/puntero, otro para pantalla
-   táctil. input.js marca <html class="es-tactil"> según el dispositivo. */
-.hint-tactil {
+/* Tres hints por acción: teclado/puntero, pantalla táctil y mando.
+   input.js marca <html> con `es-tactil` según el dispositivo y con
+   `hay-mando` cuando se conecta un joystick o los mandos del Quest.
+   El mando tiene prioridad: si hay uno, es lo que la persona está usando. */
+.hint-tactil,
+.hint-mando {
   display: none;
 }
 
@@ -509,10 +551,19 @@ body {
   display: inline;
 }
 
+:root.hay-mando .hint-teclado,
+:root.hay-mando .hint-tactil {
+  display: none;
+}
+
+:root.hay-mando .hint-mando {
+  display: inline;
+}
+
 .atraccion-prompt {
   display: table;
   margin: 0 auto 0.8em;
-  font-size: clamp(28px, 3vw, 40px);
+  font-size: var(--txt-medio);
   font-weight: 800;
   letter-spacing: 0.12em;
   color: var(--smt-azul-hondo);
@@ -550,7 +601,7 @@ body {
 }
 
 .resultado-placa h2 {
-  font-size: clamp(32px, 3.6vw, 48px);
+  font-size: var(--txt-grande);
   font-weight: 800;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -558,7 +609,7 @@ body {
 }
 
 .resultado-grande {
-  font-size: clamp(72px, 11vw, 140px);
+  font-size: var(--txt-cifra);
   font-weight: 800;
   line-height: 1.1;
   color: var(--smt-dorado);
@@ -576,20 +627,20 @@ body {
 }
 
 .resultado-stats dt {
-  font-size: clamp(22px, 4vw, 32px);
+  font-size: var(--txt-base);
   font-weight: 500;
   color: var(--smt-celeste);
 }
 
 .resultado-stats dd {
-  font-size: clamp(26px, 4.6vw, 38px);
+  font-size: var(--txt-medio);
   font-weight: 800;
   font-variant-numeric: tabular-nums;
 }
 
 /* Línea de récord: "¡Récord nuevo!" o el mejor puntaje a superar */
 .resultado-record {
-  font-size: clamp(24px, 3vw, 34px);
+  font-size: var(--txt-base);
   font-weight: 700;
   color: var(--smt-celeste);
   min-height: 1.3em;
@@ -607,7 +658,7 @@ body {
 
 .resultado-pie {
   margin-top: 1em;
-  font-size: 32px;
+  font-size: var(--txt-base);
   font-weight: 700;
   color: var(--smt-blanco);
   animation: pulso 1.6s ease-in-out infinite;
@@ -619,7 +670,7 @@ body {
   left: 0;
   right: 0;
   text-align: center;
-  font-size: 32px;
+  font-size: var(--txt-base);
   font-weight: 700;
   color: var(--smt-blanco);
   pointer-events: none;
@@ -639,7 +690,7 @@ body {
 }
 
 .diagnostico h1 {
-  font-size: 36px;
+  font-size: var(--txt-medio);
   font-weight: 700;
   color: var(--smt-celeste);
   letter-spacing: 0.04em;
@@ -647,14 +698,14 @@ body {
 }
 
 .diagnostico .instruccion {
-  font-size: 32px;
+  font-size: var(--txt-base);
   max-width: 60ch;
 }
 
 /* El código de la última tecla: enorme, legible desde lejos.
    clamp() lo achica en ventanas chicas para que nunca desborde la placa. */
 .diagnostico .codigo-actual {
-  font-size: clamp(40px, 11vw, 120px);
+  font-size: var(--txt-cifra);
   max-width: 90vw;
   overflow-wrap: anywhere;
   font-weight: 700;
@@ -673,14 +724,14 @@ body {
 }
 
 .diagnostico .detalle {
-  font-size: 32px;
+  font-size: var(--txt-base);
   color: var(--smt-celeste);
   min-height: 1.4em;
 }
 
 .diagnostico .historial {
   list-style: none;
-  font-size: 32px;
+  font-size: var(--txt-base);
   font-variant-numeric: tabular-nums;
   opacity: 0.85;
   display: flex;
@@ -695,14 +746,14 @@ body {
 }
 
 .diagnostico .codigos-vistos {
-  font-size: 32px;
+  font-size: var(--txt-base);
   color: var(--smt-dorado);
   max-width: 80vw;
 }
 
 /* Veredicto sobre si el puntero sostiene la pulsación (afecta la agachada) */
 .diagnostico .veredicto {
-  font-size: 32px;
+  font-size: var(--txt-base);
   font-weight: 700;
   max-width: 70ch;
   padding: 0.4em 0.8em;

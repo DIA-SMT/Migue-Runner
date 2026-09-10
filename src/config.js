@@ -151,9 +151,42 @@ export const MUNDO = {
 };
 
 export const CAMARA = {
-  FOV: 55,
+  FOV: 55, // FOV vertical de referencia (proyector 16:9)
   POSICION: { x: 0, y: 2.2, z: 4.2 },
   MIRA: { x: 0, y: 1.2, z: -6 },
+
+  // --- Adaptación al formato de pantalla ---
+  //
+  // El FOV de una PerspectiveCamera es VERTICAL: con un FOV fijo, cuanto
+  // más angosta la pantalla, menos mundo se ve a lo ancho. En un celular
+  // vertical (aspect 0.46) sólo entran 2 unidades de ancho, y el portal de
+  // trivia mide 4.2: se veía cortado y no se podían leer las dos opciones.
+  // Eso no es un detalle estético, es el juego roto en vertical.
+  //
+  // Se corrige garantizando un ancho mínimo visible a la altura del
+  // jugador: primero se abre el FOV, y si con el tope no alcanza, se aleja
+  // la cámara. Los dos topes existen para que la escena no se deforme ni el
+  // personaje quede diminuto.
+  //
+  // Ancho a cubrir: los paneles del portal miden 3.6 y son lo que hay que
+  // poder leer; 4.4 les deja margen.
+  ANCHO_MINIMO: 4.4,
+  FOV_MAX: 74,
+  Z_MAX: 6.6,
+};
+
+export const GAMEPAD = {
+  // Mandos de Oculus Quest y joysticks comunes. Se cubren los dos mapeos
+  // porque los botones no coinciden entre ellos:
+  //   - 'xr-standard' (mandos Touch del Quest): 0=gatillo, 1=grip, 4=A/X, 5=B/Y
+  //   - 'standard' (Xbox y compatibles):        0=A, 1=B, 6=LT, 7=RT
+  // Cualquiera de los botones listados dispara la acción, así que en el
+  // Quest sirve el gatillo o el botón A, y en un joystick el gatillo o A.
+  BOTONES_SALTAR: [0, 4, 7],
+  BOTONES_AGACHARSE: [1, 5, 6],
+  // Palanca izquierda como alternativa: arriba salta, abajo agacha.
+  EJE_VERTICAL: 1,
+  UMBRAL_EJE: 0.6,
 };
 
 export const JUGADOR = {
