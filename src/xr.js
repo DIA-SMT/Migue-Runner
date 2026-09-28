@@ -89,7 +89,7 @@ function crearDiagnostico(rig) {
           // La altura de la cabeza contra su reposo: sirve para ajustar los
           // umbrales del agache si resultan muy sensibles o muy duros.
           { texto: `cabeza: ${datos.cabeza}`, escala: 0.25, peso: 500 },
-          { texto: `giro: ${datos.giro}° · piso: ${datos.espacio}`, escala: 0.25, peso: 500 },
+          { texto: `giro: ${datos.giro}° · piso: ${datos.espacio} · salir: ${datos.salida}`, escala: 0.25, peso: 500 },
           {
             texto: errores.length ? `ERROR: ${errores[0]}` : 'sin errores de JS',
             color: errores.length ? COLORES_PANEL.error : COLORES_PANEL.ok,
@@ -247,6 +247,8 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   // altura de reposo, que se aprende sola durante la partida.
   let alturaReposo = 0;
   let agachadoFisico = false;
+  // Cuándo empezó el gesto de salida (los dos botones juntos).
+  let salirDesde = 0;
 
   // La cámara vive dentro del rig, así que su Y local ES la altura de la
   // cabeza sobre el piso virtual: no hace falta convertir a coordenadas de
@@ -286,6 +288,7 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     vistas: 0,
     espacio: '-',
     cabeza: '-',
+    salida: '-',
   };
 
   function revisarMandos() {
@@ -294,6 +297,10 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
 
     let saltar = false;
     let agachar = false;
+    // Gatillo y grip crudos, para el gesto de salida: hay que saber si están
+    // apretados AHORA, no sólo cuándo se apretaron.
+    let gatillo = false;
+    let grip = false;
     const apretados = [];
     const ejes = [];
     informe.mandos = sesion.inputSources.length;
@@ -301,6 +308,8 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     for (const fuente of sesion.inputSources) {
       const mando = fuente.gamepad;
       if (!mando) continue;
+      if (mando.buttons[0]?.pressed) gatillo = true;
+      if (mando.buttons[1]?.pressed) grip = true;
       // Mapeo 'xr-standard': 4 = A/X, 5 = B/Y. El gatillo (0) y el grip (1)
       // ya llegan por evento, así que acá se cubren los botones de pulgar.
       for (const i of XR.BOTONES_SALTAR) if (mando.buttons[i]?.pressed) saltar = true;
@@ -325,6 +334,31 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     if (!agachar && agacharAntes) acciones.soltarAgacharse?.();
     saltarAntes = saltar;
     agacharAntes = agachar;
+
+    revisarGestoSalida(sesion, gatillo && grip);
+  }
+
+  // Mantener los dos botones a la vez cierra la sesión. Se avisa el
+  // progreso en pantalla: si no, mantenerlos parece que no hace nada, y
+  // alguien que los apretó sin querer no entiende por qué se sale.
+  function revisarGestoSalida(sesion, ambos) {
+    if (!ambos) {
+      if (salirDesde !== 0) acciones.avisar?.(''); // se soltó antes de tiempo
+      salirDesde = 0;
+      informe.salida = '-';
+      return;
+    }
+    if (salirDesde === 0) salirDesde = performance.now();
+    const falta = XR.SALIR_MANTENER_S - (performance.now() - salirDesde) / 1000;
+    informe.salida = falta.toFixed(1);
+
+    if (falta <= 0) {
+      salirDesde = 0;
+      acciones.avisar?.('');
+      sesion.end();
+    } else {
+      acciones.avisar?.(`Saliendo de VR… ${Math.ceil(falta)}`);
+    }
   }
 
   renderer.xr.addEventListener('sessionstart', () => {

@@ -232,7 +232,11 @@ export const XR = {
     insignias: { x: -1.02, y: 1.62, z: -2.4, ancho: 0.74, alto: 0.15, giro: 0.33, orden: 102 },
     aviso: { x: 0, y: 2.5, z: -4.2, ancho: 1.9, alto: 0.66, giro: 0, orden: 101 },
     frase: { x: 0, y: 1.15, z: -3.0, ancho: 1.35, alto: 0.28, giro: 0, orden: 103 },
-    pantalla: { x: 0, y: 1.75, z: -3.6, ancho: 2.0, alto: 1.35, giro: 0, orden: 100 },
+    // Más alta que ancha a propósito: el ancho ya está en el límite cómodo
+    // (31°) y acá entran seis renglones —título, récord y los controles—,
+    // así que el aire tiene que salir de lo vertical o el autoajuste achica
+    // el texto hasta volverlo ilegible en el visor.
+    pantalla: { x: 0, y: 1.75, z: -3.6, ancho: 2.0, alto: 1.62, giro: 0, orden: 100 },
   },
 
   // Resolución de las texturas del HUD. Más alto que en pantalla plana
@@ -251,6 +255,15 @@ export const XR = {
   // 1 = máxima (la periferia se dibuja con mucho menos detalle). Sube los
   // fps casi sin costo visible, porque la vista no enfoca la periferia.
   FOVEACION: 1,
+
+  // Salir de la sesión desde adentro. El botón "Salir de VR" vive en el DOM
+  // y en modo inmersivo el DOM no se ve, así que sin esto la única salida
+  // era el botón del sistema del visor.
+  //
+  // El gesto es mantener los DOS botones, igual que el de recalibrar el
+  // puntero en el stand: no se dispara sin querer y no necesita apuntar a
+  // ningún lado.
+  SALIR_MANTENER_S: 2,
 
   // Botones de los mandos del visor, mapeo 'xr-standard'.
   // El gatillo (0) y el grip (1) llegan por los eventos 'select' y

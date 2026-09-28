@@ -173,6 +173,9 @@ const xr = crearXR({
     saltar: () => entrada.accion('saltar'),
     agacharse: () => entrada.accion('agacharse'),
     soltarAgacharse: () => entrada.accion('soltarAgacharse'),
+    // Avisos del propio modo VR (hoy la cuenta para salir), que no son
+    // eventos de juego sino de la sesión.
+    avisar: (texto) => hud3d.avisar(texto),
   },
   alEntrar() {
     hudDom.mostrarAtraccion(); // deja el DOM en un estado limpio detrás

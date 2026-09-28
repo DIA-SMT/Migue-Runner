@@ -98,8 +98,20 @@ export function crearHud3d(rig) {
         ...(record > 0
           ? [{ texto: `☀ Récord: ${record}`, color: COLORES_PANEL.dorado, escala: 0.55 }]
           : []),
-        { texto: 'Gatillo o A: jugás con MIGUE', escala: 0.45, peso: 700 },
-        { texto: 'Grip o B: jugás con CHANBACHI', escala: 0.45, peso: 700 },
+        { texto: 'GATILLO (o A) = saltar · elegís a MIGUE', escala: 0.42, peso: 700 },
+        { texto: 'GRIP (o B) = agacharte · elegís a CHANBACHI', escala: 0.42, peso: 700 },
+        {
+          texto: 'También podés agacharte agachándote de verdad',
+          color: COLORES_PANEL.celeste,
+          escala: 0.36,
+          peso: 500,
+        },
+        {
+          texto: 'Los dos botones juntos 2 s = salir de VR',
+          color: COLORES_PANEL.celeste,
+          escala: 0.36,
+          peso: 500,
+        },
       ]);
     },
 
@@ -209,6 +221,20 @@ export function crearHud3d(rig) {
       temporizadorFrase = setTimeout(() => {
         frase.malla.visible = false;
       }, 2000);
+    },
+
+    // Aviso que se sostiene mientras dura (hoy: la cuenta regresiva para
+    // salir de VR). A diferencia de mostrarFrase() no se va sola: se
+    // limpia pasando texto vacío, porque el gesto puede soltarse antes.
+    avisar(texto) {
+      if (!texto) {
+        clearTimeout(temporizadorFrase);
+        frase.malla.visible = false;
+        return;
+      }
+      clearTimeout(temporizadorFrase);
+      frase.malla.visible = true;
+      frase.escribir([{ texto, color: COLORES_PANEL.celeste, escala: 0.75 }], { borde: 'ninguno' });
     },
 
     // En VR no hay viñeta de daño a pantalla completa: un destello que
