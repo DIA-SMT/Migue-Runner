@@ -117,6 +117,9 @@ export async function crearPersonajes(escena) {
   let relojInterno = 0;
   let tiempoBob = 0;
   let squashRestante = 0; // temporizador del aplastamiento de aterrizaje
+  // Desvío lateral (sólo VR): a dónde quiere ir el cuerpo y dónde está.
+  let desvioObjetivo = 0;
+  let desvioActual = 0;
 
   const enAire = () => saltoY > 0.001 || velocidadY > 0;
   const agachadoActivo = () =>
@@ -187,11 +190,24 @@ export async function crearPersonajes(escena) {
     enAire,
     estaAgachado: agachadoActivo,
 
+    // Correrse al costado. `senal` va de -1 (todo a la izquierda) a 1 (todo
+    // a la derecha); en pantalla plana nadie la llama y queda en 0.
+    //
+    // Se guarda el objetivo y no la posición: el seguimiento suavizado vive
+    // en actualizar(), para que el cuerpo no salte de un lado al otro cuando
+    // el seguimiento de manos entrega una pose con ruido.
+    desviar(senal) {
+      desvioObjetivo = Math.max(-1, Math.min(1, senal)) * JUGADOR.DESVIO_MAX;
+    },
+    desvio: () => desvioActual,
+
     hitbox() {
       return {
         yMin: saltoY,
         yMax: saltoY + (agachadoActivo() ? JUGADOR.HITBOX.ALTO_AGACHADO : JUGADOR.HITBOX.ALTO),
         profundo: JUGADOR.HITBOX.PROFUNDO,
+        xMin: desvioActual - JUGADOR.HITBOX.ANCHO / 2,
+        xMax: desvioActual + JUGADOR.HITBOX.ANCHO / 2,
       };
     },
 
@@ -201,10 +217,13 @@ export async function crearPersonajes(escena) {
       agachadoDeseado = false;
       agachadoDesde = -Infinity;
       squashRestante = 0;
+      desvioObjetivo = 0;
+      desvioActual = 0;
       enPatineta = false;
       inmune = false;
       contenedor.scale.set(1, 1, 1);
       raiz.position.y = 0;
+      raiz.position.x = 0;
       raiz.rotation.set(JUGADOR.INCLINACION, 0, 0);
       raiz.visible = true;
       halo.visible = false;
@@ -280,8 +299,15 @@ export async function crearPersonajes(escena) {
         }
       }
 
+      // ---- Desvío lateral ----
+      // Persigue al objetivo en vez de saltar a él: el seguimiento de manos
+      // y la pose de la cabeza tienen ruido, y sin suavizar el cuerpo
+      // tirita. Además el ladeo vende el movimiento como una esquivada.
+      desvioActual += (desvioObjetivo - desvioActual) * Math.min(1, JUGADOR.DESVIO_SUAVIZADO * dt);
+
       raiz.position.y = saltoY + bob;
-      raiz.rotation.z = balanceo;
+      raiz.position.x = desvioActual;
+      raiz.rotation.z = balanceo - desvioActual * JUGADOR.DESVIO_INCLINACION;
       raiz.rotation.x += (inclinacionObjetivo + cabeceo - raiz.rotation.x) * Math.min(1, 14 * dt);
 
       // La patineta acompaña el salto pero no la agachada, y gira apenas

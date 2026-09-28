@@ -100,6 +100,13 @@ export const PALETA = {
   HIERRO: 0x3a4750,
   MANTEL: 0xc0453b,
   EMPANADA: 0xdba85e, // dorado de empanada tucumana recién frita
+
+  // Naranjo de vereda: el árbol del centro de San Miguel.
+  NARANJO_TRONCO: 0x6f4d33,
+  NARANJO_HOJA: 0x2f6b3a,
+  NARANJO_HOJA_CLARA: 0x3f8a48,
+  NARANJA_FRUTA: 0xe8862b,
+  CANTERO: 0x9a8b74,
   EMPANADA_TOSTADA: 0xc08a42, // repulgue más dorado
   CANASTA: 0xa9762f,
   FRUTA_A: 0xd9772e, // naranjas
@@ -219,6 +226,31 @@ export const XR = {
   // la agachada titila cuando la mano queda justo en el límite.
   MANO_LEVANTAR: 0.25, // hay que subir la muñeca hasta acá para que cuente
   MANO_BAJAR: 0.45, // y bajarla hasta acá para soltar
+
+  // --- Esquivar de costado (obstáculos clase 'costado') ---
+  //
+  // Dos gestos alimentan la MISMA señal y se toma el más marcado:
+  //
+  //  1. INCLINAR EL CUERPO. Se mide cuánto se corrió la cabeza respecto de
+  //     su centro de reposo, que se aprende solo igual que la altura. El
+  //     centro sólo se reaprende mientras la cabeza está quieta en el medio;
+  //     si se reaprendiera siempre, una inclinación sostenida se
+  //     "normalizaría" y el desvío se iría solo a los pocos segundos.
+  //
+  //  2. ESTIRAR EL BRAZO al costado. Es la alternativa para quien no puede o
+  //     no quiere inclinarse: sentado, en silla de ruedas, o con poco lugar
+  //     alrededor (en un stand con gente al lado, inclinarse con el visor
+  //     puesto es justo lo que no querés). Funciona igual estando sentado.
+  //
+  // Lo que separa "levantar la mano" de "estirar el brazo" es la distancia
+  // LATERAL a la cabeza, no la altura: con el brazo horizontal la muñeca
+  // queda a la altura del hombro, que es casi el mismo MANO_LEVANTAR. Por
+  // eso MANO_AL_COSTADO parte las dos cosas sin ambigüedad — levantada la
+  // muñeca queda cerca del cuerpo, estirada queda lejos.
+  INCLINACION_MUERTA: 0.05, // por debajo de esto es ruido de estar parado
+  INCLINACION_MAX: 0.18, // acá el desvío es total
+  MANO_AL_COSTADO: 0.42, // frontera entre "levantada" y "estirada al costado"
+  BRAZO_MAX: 0.62, // muñeca acá = desvío total
 
   // Viñeta de confort: un plano con degradado radial pegado delante de los
   // ojos, transparente en el centro y opaco en los bordes. Recorta la
@@ -341,7 +373,21 @@ export const JUGADOR = {
     ALTO: 1.5,
     ALTO_AGACHADO: 0.85,
     PROFUNDO: 0.5,
+    // El ancho sólo lo usan los obstáculos de clase 'costado', que existen
+    // nada más que en VR: en plano el jugador está siempre en x=0 y ningún
+    // obstáculo deja un lado libre, así que nunca se consulta.
+    ANCHO: 0.55,
   },
+
+  // --- Desvío lateral: correrse al costado ---
+  //
+  // Existe SÓLO en VR. En pantalla plana hay dos botones y con eso no
+  // alcanza para una tercera acción, así que el desvío queda clavado en 0 y
+  // el juego es exactamente el mismo de siempre. En VR el cuerpo de la
+  // persona aporta un eje que los botones no tienen.
+  DESVIO_MAX: 0.85, // cuánto se corre Migue hacia cada lado, en metros
+  DESVIO_SUAVIZADO: 9, // con cuánta urgencia persigue al objetivo (1/s)
+  DESVIO_INCLINACION: 0.35, // cuánto se ladea el cuerpo al correrse, rad por metro
 };
 
 export const SALTO = {
@@ -387,6 +433,10 @@ export const OBSTACULOS = {
   //   del salto (SALTO.VELOCIDAD_INICIAL² / 2·GRAVEDAD ≈ 0.87) con margen.
   // clase 'alto': se pasa agachado. ALTO_LIBRE tiene que superar la hitbox
   //   agachada (JUGADOR.HITBOX.ALTO_AGACHADO = 0.85) con margen.
+  // clase 'costado': tapa un lado de la vereda de arriba abajo, así que no
+  //   se salta ni se agacha — hay que correr el cuerpo al otro lado. SÓLO
+  //   aparece en VR: en pantalla plana no hay con qué esquivarla, y por eso
+  //   dificultad.js la filtra salvo que el desvío esté habilitado.
   // Los tipos están de más fácil a más difícil dentro de cada clase.
   TIPOS: {
     valla: { clase: 'bajo', ANCHO: 2.6, ALTO: 0.62, PROFUNDO: 0.25 },
@@ -396,6 +446,24 @@ export const OBSTACULOS = {
     cartel: { clase: 'alto', ANCHO: 3.6, ALTO_LIBRE: 1.35, PANEL_ALTO: 1.0, PROFUNDO: 0.15 },
     banderines: { clase: 'alto', ANCHO: 4.2, ALTO_LIBRE: 1.2, PANEL_ALTO: 0.75, PROFUNDO: 0.15 },
     toldo: { clase: 'alto', ANCHO: 3.8, ALTO_LIBRE: 1.05, PANEL_ALTO: 0.9, PROFUNDO: 0.7 },
+    // Rama de naranjo: las veredas del centro están llenas de naranjos, así
+    // que es el obstáculo lateral que menos hay que explicar.
+    //
+    // DESDE_X es el borde INTERNO (el que mira al lado libre) y está pasado
+    // del centro a propósito: si arrancara en 0, con correrse unos centímetros
+    // alcanzaba y el gesto no se sentiría. Así hay que desviarse 0.475 de los
+    // 0.85 que da DESVIO_MAX —el 56%—, que con INCLINACION_MAX son unos 12 cm
+    // de inclinación: un movimiento de hombros, no una zambullida. Es a
+    // propósito: alguien con un visor puesto, en un stand y con gente al
+    // lado, no tiene que perder el equilibrio para jugar.
+    rama: {
+      clase: 'costado',
+      ANCHO: 2.2,
+      DESDE_X: -0.2,
+      ALTO_BASE: 0.25, // el follaje cuelga casi hasta el piso: no se salta
+      ALTO_TOPE: 2.6, // ni se pasa por arriba
+      PROFUNDO: 0.55,
+    },
   },
 };
 
@@ -421,35 +489,37 @@ export const DIFICULTAD = {
     {
       desde: 300,
       nombre: '¡Puesto de empanadas!',
-      tipos: ['valla', 'cajones', 'empanadas'],
+      // 'rama' sólo sale en VR (clase 'costado'): en plano dificultad.js la
+      // filtra, así que este nivel es el mismo de siempre en la pantalla.
+      tipos: ['valla', 'cajones', 'empanadas', 'rama'],
       patrones: ['simple'],
       intervalo: [2.2, 3.2],
     },
     {
       desde: 480,
       nombre: 'Agachate, chango',
-      tipos: ['valla', 'cajones', 'empanadas', 'cartel'],
+      tipos: ['valla', 'cajones', 'empanadas', 'cartel', 'rama'],
       patrones: ['simple'],
       intervalo: [2.1, 3.0],
     },
     {
       desde: 700,
       nombre: 'Fiestas patrias',
-      tipos: ['valla', 'cajones', 'empanadas', 'banco', 'cartel', 'banderines'],
+      tipos: ['valla', 'cajones', 'empanadas', 'banco', 'cartel', 'banderines', 'rama'],
       patrones: ['simple', 'dobleBajo'],
       intervalo: [2.0, 2.8],
     },
     {
       desde: 980,
       nombre: 'Hora pico en el centro',
-      tipos: ['valla', 'cajones', 'empanadas', 'banco', 'cartel', 'banderines', 'toldo'],
+      tipos: ['valla', 'cajones', 'empanadas', 'banco', 'cartel', 'banderines', 'toldo', 'rama'],
       patrones: ['simple', 'dobleBajo', 'bajoAlto'],
       intervalo: [1.9, 2.6],
     },
     {
       desde: 1350,
       nombre: '¡Plena zafra!',
-      tipos: ['valla', 'cajones', 'empanadas', 'banco', 'cartel', 'banderines', 'toldo'],
+      tipos: ['valla', 'cajones', 'empanadas', 'banco', 'cartel', 'banderines', 'toldo', 'rama'],
       patrones: ['simple', 'dobleBajo', 'bajoAlto', 'altoBajo'],
       intervalo: [1.8, 2.4],
     },

@@ -55,20 +55,37 @@ for (const tipo of tipos) {
   malla.position.set(x, 0, 0);
   escena.add(malla);
 
-  // Caja de colisión en wireframe: verde si es bajo, rojo si es alto.
+  // Caja de colisión en wireframe: verde si es bajo, rojo si es alto,
+  // celeste si se esquiva de costado.
   const esBajo = t.clase === 'bajo';
-  const yMin = esBajo ? 0 : t.ALTO_LIBRE;
-  const yMax = esBajo ? t.ALTO : t.ALTO_LIBRE + t.PANEL_ALTO + 0.5;
+  const esCostado = t.clase === 'costado';
+  const yMin = esBajo ? 0 : esCostado ? t.ALTO_BASE : t.ALTO_LIBRE;
+  const yMax = esBajo ? t.ALTO : esCostado ? t.ALTO_TOPE : t.ALTO_LIBRE + t.PANEL_ALTO + 0.5;
   const alto = yMax - yMin;
   const cajaColision = new THREE.Mesh(
     new THREE.BoxGeometry(t.ANCHO, alto, t.PROFUNDO),
     new THREE.MeshBasicMaterial({
-      color: esBajo ? 0x00ff00 : 0xff0000,
+      color: esBajo ? 0x00ff00 : esCostado ? 0x4fa3d1 : 0xff0000,
       wireframe: true,
     }),
   );
-  cajaColision.position.set(x, yMin + alto / 2, 0);
+  // Los de costado no están centrados en x=0: ese corrimiento ES el
+  // obstáculo, así que dibujarlos centrados escondería justo lo que hay que
+  // revisar (dónde queda el hueco por el que hay que pasar).
+  const centro = esCostado ? t.DESDE_X + t.ANCHO / 2 : 0;
+  cajaColision.position.set(x + centro, yMin + alto / 2, 0);
   escena.add(cajaColision);
+
+  // Y para los de costado, el hueco libre: por acá tiene que entrar Migue.
+  if (esCostado) {
+    const hueco = new THREE.Mesh(
+      new THREE.BoxGeometry(JUGADOR.HITBOX.ANCHO, JUGADOR.HITBOX.ALTO, JUGADOR.HITBOX.PROFUNDO),
+      new THREE.MeshBasicMaterial({ color: 0xffd23f, wireframe: true }),
+    );
+    // Pegado al borde libre, que es donde queda el jugador desviado al máximo.
+    hueco.position.set(x - JUGADOR.DESVIO_MAX, JUGADOR.HITBOX.ALTO / 2, 0);
+    escena.add(hueco);
+  }
 
   puntosEtiqueta.push({ x, tipo, clase: t.clase });
   x += 5;

@@ -92,7 +92,15 @@ function crearDiagnostico(rig) {
           // si el juego la da por levantada: sirve para ajustar los umbrales
           // MANO_LEVANTAR / MANO_BAJAR leyéndolos desde adentro del visor.
           { texto: `cabeza: ${datos.cabeza} · manos: ${datos.manos}`, escala: 0.25, peso: 500 },
-          { texto: `giro: ${datos.giro}° · piso: ${datos.espacio} · salir: ${datos.salida}`, escala: 0.25, peso: 500 },
+          // `lateral` es el desvío pedido, de -1 a 1: con esto se ajustan
+          // INCLINACION_MAX y BRAZO_MAX sin salir del visor. Va pegado al
+          // giro y no en un renglón propio porque el panel ya está al límite
+          // de líneas y el autoajuste achicaría todo el texto.
+          {
+            texto: `giro: ${datos.giro}° · lat: ${datos.lateral} · salir: ${datos.salida}`,
+            escala: 0.25,
+            peso: 500,
+          },
           {
             texto: errores.length ? `ERROR: ${errores[0]}` : 'sin errores de JS',
             color: errores.length ? COLORES_PANEL.error : COLORES_PANEL.ok,
@@ -269,6 +277,8 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   let salirDesde = 0;
   // Qué mano está levantada ahora mismo, jugando sin mandos.
   const manoLevantada = { left: false, right: false };
+  // Centro lateral de reposo de la cabeza; null hasta la primera pose.
+  let centroReposo = null;
   // 'mandos' | 'manos'. Cambia solo cuando la persona suelta los mandos: el
   // Quest pasa a seguimiento de manos sin avisar, y el HUD tiene que
   // explicar los gestos que correspondan.
@@ -315,6 +325,7 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     salida: '-',
     entrada: 'mandos',
     manos: '-',
+    lateral: '0.00',
   };
 
   // Altura de la muñeca de una mano, o null si el visor no la está viendo.
@@ -323,42 +334,91 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   // el que three deja camara.position (la cámara cuelga del rig, así que su
   // posición local es la pose de la cabeza sobre el piso). Por eso se pueden
   // restar directamente sin convertir a coordenadas de mundo.
-  function alturaDeMuneca(fuente) {
+  function poseDeMuneca(fuente) {
     const marco = renderer.xr.getFrame?.();
     const espacio = renderer.xr.getReferenceSpace();
     if (!marco || !espacio) return null;
     const muneca = fuente.hand.get('wrist');
     if (!muneca) return null;
     const pose = marco.getJointPose(muneca, espacio);
-    return pose ? pose.transform.position.y : null;
+    return pose ? { x: pose.transform.position.x, y: pose.transform.position.y } : null;
   }
 
-  // Levantar la mano derecha salta y la izquierda agacha. El umbral se mide
-  // contra la altura de los OJOS, no contra el piso, así que no hay que
-  // calibrar nada para cada persona.
-  function revisarManos(sesion) {
+  // Rampa 0→1 entre dos umbrales, para convertir una distancia en intención.
+  // Por debajo de `muerto` no cuenta (es el temblor de estar parado) y por
+  // encima de `lleno` está al máximo.
+  function rampa(valor, muerto, lleno) {
+    if (valor <= muerto) return 0;
+    return Math.min(1, (valor - muerto) / (lleno - muerto));
+  }
+
+  // Levantar la mano derecha salta y la izquierda agacha; estirar un brazo al
+  // costado corre el cuerpo hacia ese lado. Los umbrales se miden contra la
+  // CABEZA —altura de los ojos y posición lateral—, no contra el piso ni el
+  // centro de la sala, así que no hay que calibrar nada para cada persona ni
+  // para dónde se paró.
+  function revisarManos(sesion, cabezaX) {
     const ojos = camara.position.y;
-    const caida = { left: null, right: null };
+    const poses = { left: null, right: null };
     for (const fuente of sesion.inputSources) {
-      if (esMano(fuente)) caida[fuente.handedness] = alturaDeMuneca(fuente);
+      if (esMano(fuente)) poses[fuente.handedness] = poseDeMuneca(fuente);
     }
 
+    let brazo = 0; // desvío pedido con el brazo, de -1 a 1
+    const leyenda = [];
+
     for (const lado of ['left', 'right']) {
-      const altura = caida[lado];
+      const pose = poses[lado];
       // Sin pose no hay mano a la vista. Cuenta como bajada a propósito: si
       // el visor pierde la mano con la agachada puesta, se suelta sola en
       // vez de quedar agachado para siempre.
-      const bajo = altura === null ? Infinity : ojos - altura;
-      if (!manoLevantada[lado] && bajo < XR.MANO_LEVANTAR) manoLevantada[lado] = true;
-      else if (manoLevantada[lado] && bajo > XR.MANO_BAJAR) manoLevantada[lado] = false;
-      caida[lado] = bajo;
+      const bajo = pose === null ? Infinity : ojos - pose.y;
+      const aparte = pose === null ? 0 : pose.x - cabezaX;
+
+      // Lo que separa los dos gestos es la distancia LATERAL, no la altura:
+      // con el brazo horizontal la muñeca queda a la altura del hombro, que
+      // es casi el mismo umbral que "levantada". Al partir por el costado,
+      // los dos gestos no se pisan nunca.
+      const alCostado = Math.abs(aparte) > XR.MANO_AL_COSTADO;
+
+      if (alCostado) {
+        manoLevantada[lado] = false;
+        const fuerza = rampa(Math.abs(aparte), XR.MANO_AL_COSTADO, XR.BRAZO_MAX);
+        if (Math.abs(fuerza) > Math.abs(brazo)) brazo = fuerza * Math.sign(aparte);
+      } else if (!manoLevantada[lado] && bajo < XR.MANO_LEVANTAR) {
+        manoLevantada[lado] = true;
+      } else if (manoLevantada[lado] && bajo > XR.MANO_BAJAR) {
+        manoLevantada[lado] = false;
+      }
+
+      leyenda.push(
+        (bajo === Infinity ? '-' : bajo.toFixed(2)) +
+          (manoLevantada[lado] ? '^' : '') +
+          (alCostado ? '>' : ''),
+      );
     }
 
-    informe.manos = ['left', 'right']
-      .map((l) => (caida[l] === Infinity ? '-' : caida[l].toFixed(2)) + (manoLevantada[l] ? '^' : ''))
-      .join('/');
+    informe.manos = leyenda.join('/');
+    return { saltar: manoLevantada.right, agachar: manoLevantada.left, brazo };
+  }
 
-    return { saltar: manoLevantada.right, agachar: manoLevantada.left };
+  // Cuánto se corrió la cabeza respecto de su centro de reposo. El centro se
+  // aprende solo, pero SÓLO mientras la cabeza está quieta en el medio: si se
+  // reaprendiera siempre, una inclinación sostenida se "normalizaría" y el
+  // desvío se iría solo a los pocos segundos, igual que pasaría con la
+  // altura si el reposo bajara al agacharse.
+  function revisarInclinacion() {
+    const x = camara.position.x;
+    if (centroReposo === null) {
+      centroReposo = x;
+      return 0;
+    }
+    const corrimiento = x - centroReposo;
+    if (Math.abs(corrimiento) < XR.INCLINACION_MUERTA) {
+      centroReposo += corrimiento * 0.02;
+      return 0;
+    }
+    return rampa(Math.abs(corrimiento), XR.INCLINACION_MUERTA, XR.INCLINACION_MAX) * Math.sign(corrimiento);
   }
 
   function revisarMandos() {
@@ -385,15 +445,26 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
       acciones.cambioDeEntrada?.(modoEntrada);
     }
 
+    // Esquivar de costado: dos gestos para la misma señal y gana el más
+    // marcado. Inclinarse es lo natural; estirar el brazo es la salida para
+    // quien no puede o no quiere inclinarse (sentado, o con gente al lado).
+    // El brazo anda sólo sin mandos, la inclinación siempre.
+    const inclinacion = revisarInclinacion();
+    let lateral = inclinacion;
+
     if (hayManos) {
-      const manos = revisarManos(sesion);
+      const manos = revisarManos(sesion, camara.position.x);
       saltar = manos.saltar;
       agachar = manos.agachar;
+      if (Math.abs(manos.brazo) > Math.abs(lateral)) lateral = manos.brazo;
     } else {
       manoLevantada.left = false;
       manoLevantada.right = false;
       informe.manos = '-';
     }
+
+    informe.lateral = lateral.toFixed(2);
+    acciones.desviar?.(lateral);
 
     for (const fuente of sesion.inputSources) {
       const mando = fuente.gamepad;
@@ -484,6 +555,8 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     saltarAntes = false;
     agacharAntes = false;
     alturaReposo = 0;
+    centroReposo = null;
+    acciones.desviar?.(0);
     agachadoFisico = false;
     manoLevantada.left = false;
     manoLevantada.right = false;

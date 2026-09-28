@@ -248,6 +248,87 @@ function piezasCartel() {
 
 // Catálogo de geometría, público para que se pueda inspeccionar el arte de
 // cada obstáculo por separado sin levantar una partida.
+// COSTADO — naranjo de vereda volcado sobre la peatonal. Ocupa un solo lado
+// de arriba abajo: no se salta ni se agacha, hay que correr el cuerpo.
+//
+// Se construye SIEMPRE apoyado sobre el lado derecho; activar() lo gira
+// media vuelta cuando toca el izquierdo.
+//
+// El follaje va desde 1.1 y el cantero llega hasta 0.9 a propósito: la caja
+// de colisión es un solo rectángulo de 0.25 a 2.6, así que si el medio
+// quedara visualmente vacío se chocaría contra el aire. Así cada pose del
+// jugador (parado, saltando, agachado) se topa con algo que se ve.
+function piezasRama() {
+  const { ANCHO, DESDE_X, ALTO_BASE, ALTO_TOPE } = OBSTACULOS.TIPOS.rama;
+  const xInterno = DESDE_X; // borde que mira al lado libre
+  const xExterno = DESDE_X + ANCHO; // borde de la vereda, donde va el tronco
+  const centro = (xInterno + xExterno) / 2;
+  const piezas = [];
+
+  // Cantero de mampostería: tapa la franja baja y explica por qué hay un
+  // árbol en el medio de la peatonal.
+  piezas.push(caja(ANCHO, 0.55, 0.5, centro, ALTO_BASE + 0.27, 0, PALETA.CANTERO));
+  piezas.push(caja(ANCHO + 0.08, 0.1, 0.56, centro, ALTO_BASE + 0.55, 0, PALETA.PIEDRA_PORTAL));
+  // Tierra
+  piezas.push(caja(ANCHO - 0.25, 0.08, 0.36, centro, ALTO_BASE + 0.58, 0, PALETA.NARANJO_TRONCO));
+
+  // Tronco: sale del cantero y se vuelca hacia el lado libre.
+  const tronco = new THREE.CylinderGeometry(0.16, 0.22, 1.5, 7);
+  tronco.rotateZ(0.26); // volcado hacia la peatonal
+  tronco.translate(xExterno - 0.35, ALTO_BASE + 1.3, 0);
+  piezas.push({ geometria: tronco, color: PALETA.NARANJO_TRONCO });
+
+  // Rama gruesa que cruza hacia adentro, que es lo que hay que esquivar.
+  const rama = new THREE.CylinderGeometry(0.09, 0.14, ANCHO * 0.85, 6);
+  rama.rotateZ(Math.PI / 2 - 0.22);
+  rama.translate(centro - 0.15, 1.75, 0);
+  piezas.push({ geometria: rama, color: PALETA.NARANJO_TRONCO });
+
+  // Copa: masas de hojas facetadas. Se reparten cubriendo todo el ancho,
+  // con la más baja colgando sobre el borde interno.
+  const masas = [
+    { x: xExterno - 0.45, y: 2.15, r: 0.62 },
+    { x: centro, y: 2.0, r: 0.58 },
+    { x: xInterno + 0.45, y: 1.72, r: 0.52 },
+    { x: xInterno + 0.2, y: 1.28, r: 0.36 },
+    { x: xExterno - 0.2, y: 1.45, r: 0.42 },
+  ];
+  masas.forEach((m, i) => {
+    const hoja = new THREE.IcosahedronGeometry(m.r, 0);
+    hoja.scale(1, 0.82, 0.7);
+    hoja.translate(m.x, m.y, 0);
+    piezas.push({
+      geometria: hoja,
+      color: i % 2 === 0 ? PALETA.NARANJO_HOJA : PALETA.NARANJO_HOJA_CLARA,
+    });
+  });
+
+  // Naranjas: son lo que hace reconocible al árbol de un vistazo, así que
+  // van sobre el borde de las masas, no adentro.
+  const frutas = [
+    [xInterno + 0.34, 1.5],
+    [centro - 0.3, 1.66],
+    [centro + 0.35, 2.45],
+    [xExterno - 0.5, 1.72],
+    [xExterno - 0.25, 2.5],
+    [xInterno + 0.55, 2.02],
+  ];
+  for (const [x, y] of frutas) {
+    const naranja = new THREE.IcosahedronGeometry(0.11, 0);
+    naranja.translate(x, y, 0.16);
+    piezas.push({ geometria: naranja, color: PALETA.NARANJA_FRUTA });
+  }
+
+  // Remate alto, para que la copa llegue hasta ALTO_TOPE y nadie crea que
+  // se puede pasar por arriba saltando.
+  const copa = new THREE.IcosahedronGeometry(0.5, 0);
+  copa.scale(1.5, 0.7, 0.7);
+  copa.translate(centro + 0.1, ALTO_TOPE - 0.35, 0);
+  piezas.push({ geometria: copa, color: PALETA.NARANJO_HOJA });
+
+  return piezas;
+}
+
 export const PIEZAS_POR_TIPO = {
   valla: piezasValla,
   cajones: piezasCajones,
@@ -256,6 +337,7 @@ export const PIEZAS_POR_TIPO = {
   cartel: piezasCartel,
   banderines: piezasBanderines,
   toldo: piezasToldo,
+  rama: piezasRama,
 };
 
 // ---------------------------------------------------------------------------
@@ -265,6 +347,20 @@ function cajaColision(tipo) {
   const t = OBSTACULOS.TIPOS[tipo];
   if (t.clase === 'bajo') {
     return { yMin: 0, yMax: t.ALTO, profundo: t.PROFUNDO, zFuera: OBSTACULOS.Z_FUERA_BAJO };
+  }
+  if (t.clase === 'costado') {
+    // Se describe SIEMPRE apoyada sobre el lado derecho. El lado real lo
+    // decide activar(), que espeja la caja y la malla de una sola vez: así
+    // el catálogo tiene un solo juego de números y no dos que se pueden
+    // desincronizar.
+    return {
+      zFuera: OBSTACULOS.Z_FUERA_ALTO,
+      yMin: t.ALTO_BASE,
+      yMax: t.ALTO_TOPE,
+      xMin: t.DESDE_X,
+      xMax: t.DESDE_X + t.ANCHO,
+      profundo: t.PROFUNDO,
+    };
   }
   return {
     zFuera: OBSTACULOS.Z_FUERA_ALTO,
@@ -332,7 +428,26 @@ export function crearObstaculos(escena, dificultad) {
     libre.superado = false;
     libre.malla.visible = true;
     libre.malla.position.z = z;
+    // Los de costado salen a izquierda o derecha, sorteado. La geometría
+    // está hecha para el lado derecho y la caja de colisión se espeja con la
+    // misma cuenta, así que no pueden quedar mirando a lados distintos.
+    //
+    // Se GIRA media vuelta en vez de escalar en -1: una escala negativa
+    // invierte el sentido de las caras y el modelo se ve del revés, con la
+    // luz por dentro. El giro espeja en X sin tocar las normales, y en Z da
+    // igual porque la rama es casi plana.
+    if (libre.colision.xMin !== undefined) {
+      libre.lado = Math.random() < 0.5 ? -1 : 1;
+      libre.malla.rotation.y = libre.lado === -1 ? Math.PI : 0;
+    }
     return true;
+  }
+
+  // Bordes en X de un obstáculo de costado, ya espejados según su lado.
+  function bordesX(o) {
+    return o.lado === -1
+      ? { xMin: -o.colision.xMax, xMax: -o.colision.xMin }
+      : { xMin: o.colision.xMin, xMax: o.colision.xMax };
   }
 
   // Suelta el grupo que decidió dificultad.js. Si el pool no alcanza para
@@ -384,6 +499,18 @@ export function crearObstaculos(escena, dificultad) {
       supresion = Math.max(supresion, segundos);
     },
 
+    // Retira los obstáculos de una clase que estén en vuelo. Se usa al salir
+    // de VR: una rama ya soltada quedaría imposible de esquivar, porque en
+    // pantalla plana no hay forma de correr el cuerpo.
+    despejarClase(clase) {
+      for (const o of pool) {
+        if (o.activo && OBSTACULOS.TIPOS[o.tipo].clase === clase) {
+          o.activo = false;
+          o.malla.visible = false;
+        }
+      }
+    },
+
     // Desactiva los obstáculos que cruzarían demasiado cerca del portal de
     // trivia (el salto/agachada del portal no puede competir con una valla).
     despejarCerca(zCentro, margen) {
@@ -417,15 +544,22 @@ export function crearObstaculos(escena, dificultad) {
           esquivados++;
         }
 
-        // Colisión AABB (jugador fijo en z=0, x=0)
+        // Colisión AABB (el jugador está fijo en z=0; en x sólo se mueve en
+        // VR, y sólo los obstáculos de costado miran esa coordenada).
         if (o.superado) continue;
         const solapaZ = Math.abs(z) < o.colision.profundo / 2 + hb.profundo / 2;
         if (!solapaZ) continue;
 
-        if (hb.yMin < o.colision.yMax && hb.yMax > o.colision.yMin) {
-          colision = true;
-          o.superado = true; // un solo golpe por obstáculo
+        if (hb.yMin >= o.colision.yMax || hb.yMax <= o.colision.yMin) continue;
+
+        // Los que ocupan toda la vereda no tienen bordes en X: ya chocaron.
+        if (o.colision.xMin !== undefined) {
+          const b = bordesX(o);
+          if (hb.xMin >= b.xMax || hb.xMax <= b.xMin) continue; // se corrió a tiempo
         }
+
+        colision = true;
+        o.superado = true; // un solo golpe por obstáculo
       }
 
       // Spawns

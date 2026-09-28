@@ -116,6 +116,25 @@ El umbral se mide contra la altura de los **ojos**, no del piso, así que anda i
 
 **Por qué el punto de vista está elevado** (`XR.RIG_Y`): Migue mide 1,80 y una persona tiene los ojos a ~1,60, así que su cabeza sobresale del horizonte visual y tapa justo la franja donde aparecen los carteles que vienen de lejos. Alejarse no arregla nada — desde 6 m sigue tapando. Hay que mirar desde **más arriba que el personaje**, como parado en un escalón. Hay un test que lo verifica para estaturas de 1,45 a 1,85.
 
+### Esquivar de costado: el eje que sólo existe en VR
+
+En pantalla plana hay dos botones y con eso no alcanza para una tercera acción. En VR el cuerpo aporta un eje que los botones no tienen, así que existe una clase de obstáculo más — **`costado`**, hoy la **rama de naranjo** — que tapa un lado de la vereda de arriba abajo: no se salta ni se agacha, hay que **correr el cuerpo al otro lado**.
+
+Dos gestos alimentan la misma señal y gana el más marcado:
+
+| Gesto | Para qué |
+|---|---|
+| **Inclinarse** ~12 cm hacia un lado | lo natural; además mover el cuerpo de verdad ayuda con el mareo |
+| **Estirar un brazo** al costado | para quien no puede o no quiere inclinarse: sentado, en silla de ruedas, o con gente al lado en el stand |
+
+El brazo no es un adorno: **inclinarse con un visor puesto te corre el centro de gravedad**, y en un stand con fila eso es riesgo de caída. Por eso la rama pide sólo el 56 % del desvío máximo (un movimiento de hombros) y siempre hay una alternativa que se hace sentado.
+
+Lo delicado es que *levantar la mano* y *estirar el brazo* no se pisen: con el brazo horizontal la muñeca queda casi a la altura del hombro, que es el mismo umbral de la mano levantada. Lo que los separa es la distancia **lateral** a la cabeza (`XR.MANO_AL_COSTADO`), no la altura. Hay tests dedicados a ese cruce.
+
+**En pantalla plana la rama no aparece nunca.** `dificultad.js` filtra la clase `costado` salvo que `permitirLateral(true)` esté puesto, y eso sólo pasa al entrar en VR; al salir, además, se retiran las que quedaron en vuelo. Es la garantía de que agregar VR no rompe el juego que ya anda — hay un test que suelta 21 000 grupos sin desvío y exige cero.
+
+Los umbrales se leen en vivo con `?diag=1` (líneas `manos:` y `lat:`), y el hueco por el que hay que pasar se ve en `/inspector.html` dibujado en amarillo al lado de la caja celeste del obstáculo.
+
 **Los dos HUD implementan la misma interfaz de 16 métodos.** [`src/main.js`](src/main.js) habla con un proxy que reenvía cada llamada al que esté activo, así que la lógica del juego no sabe en qué modo corre y no hubo que tocarla. Si mañana se agrega un método al HUD, hay que agregarlo en los dos.
 
 Los paneles se cuelgan del **rig** del jugador, no de la cámara: pegados a la cámara te persiguen la mirada, que en VR es incómodo; colgados del rig quedan quietos respecto al cuerpo y se miran girando la cabeza.

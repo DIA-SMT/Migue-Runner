@@ -62,6 +62,10 @@ const alAzar = (lista) => lista[Math.floor(Math.random() * lista.length)];
 
 export function crearDificultad() {
   let indiceNivel = 0;
+  // Los obstáculos de clase 'costado' se esquivan corriendo el cuerpo, y eso
+  // sólo existe en VR: con dos botones no hay con qué. Arranca apagado, así
+  // que en pantalla plana el catálogo es exactamente el de siempre.
+  let lateral = false;
 
   return {
     get indice() {
@@ -74,6 +78,13 @@ export function crearDificultad() {
     reiniciar() {
       indiceNivel = 0;
     },
+
+    // La enciende main.js al entrar en VR y la apaga al salir. No se
+    // reinicia con la partida: depende del modo, no del estado del juego.
+    permitirLateral(valor) {
+      lateral = !!valor;
+    },
+    permiteLateral: () => lateral,
 
     // Actualiza el nivel según la distancia. Devuelve el nivel nuevo si
     // hubo ascenso (para anunciarlo en el HUD), o null.
@@ -98,7 +109,9 @@ export function crearDificultad() {
     // cuánto avanza el mundo mientras el jugador aterriza o se incorpora.
     proximoGrupo(velocidad) {
       const nivel = this.nivel;
-      const disponibles = nivel.tipos.filter((t) => OBSTACULOS.TIPOS[t]);
+      const disponibles = nivel.tipos.filter(
+        (t) => OBSTACULOS.TIPOS[t] && (lateral || OBSTACULOS.TIPOS[t].clase !== 'costado'),
+      );
       const porClase = (clase) =>
         disponibles.filter((t) => OBSTACULOS.TIPOS[t].clase === clase);
 

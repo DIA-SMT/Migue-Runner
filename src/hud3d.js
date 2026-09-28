@@ -117,6 +117,11 @@ export function crearHud3d(rig) {
               { texto: 'LEVANTÁ LA MANO DERECHA = saltar · MIGUE', escala: 0.4, peso: 700 },
               { texto: 'LEVANTÁ LA IZQUIERDA = agacharte · CHANBACHI', escala: 0.4, peso: 700 },
               {
+                texto: 'ESTIRÁ UN BRAZO al costado = correrte a ese lado',
+                escala: 0.4,
+                peso: 700,
+              },
+              {
                 texto: 'Las dos manos arriba 2 s = salir de VR',
                 color: COLORES_PANEL.celeste,
                 escala: 0.34,
@@ -134,7 +139,7 @@ export function crearHud3d(rig) {
               },
             ]),
         {
-          texto: 'También podés agacharte agachándote de verdad',
+          texto: 'Agachate de verdad · inclinate para esquivar de costado',
           color: COLORES_PANEL.celeste,
           escala: 0.34,
           peso: 500,

@@ -180,18 +180,32 @@ const xr = crearXR({
     // revés. Los gestos cambian, así que la pantalla de espera tiene que
     // explicar los que corresponden.
     cambioDeEntrada: (modo) => hud3d.cambioDeEntrada(modo),
+    // Desvío lateral: el único eje de juego que no existe en pantalla plana.
+    // Llega normalizado de -1 a 1; el jugador lo convierte a metros y lo
+    // sigue suavizado.
+    desviar: (senal) => jugador?.desviar(senal),
   },
   alEntrar() {
     hudDom.mostrarAtraccion(); // deja el DOM en un estado limpio detrás
     hudActivo = hud3d;
     hud3d.activar(true);
     renderer.shadowMap.enabled = false; // el visor pide 90 fps por ojo
+    // Recién acá se habilitan los obstáculos que se esquivan de costado: en
+    // pantalla plana no hay con qué correrse, así que fuera de VR el
+    // catálogo tiene que ser el de siempre.
+    dificultad.permitirLateral(true);
     repintarPantallaActual();
   },
   alSalir() {
     hud3d.activar(false);
     hudActivo = hudDom;
     renderer.shadowMap.enabled = true;
+    dificultad.permitirLateral(false);
+    // Las ramas ya soltadas no se pueden esquivar en plano: se retiran.
+    obstaculos.despejarClase('costado');
+    // Si se sale de VR con el cuerpo corrido, Migue tiene que volver al
+    // centro: en plano nada más lo va a mover.
+    jugador?.desviar(0);
     ajustarCamara(); // vuelve al tamaño de ventana y al FOV de pantalla
     repintarPantallaActual();
   },
