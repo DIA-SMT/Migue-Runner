@@ -86,6 +86,9 @@ function crearDiagnostico(rig) {
           { texto: `mandos: ${datos.mandos} · fps: ${fps}`, escala: 0.28, peso: 700 },
           { texto: `gatillo: ${datos.gatillo} · grip: ${datos.grip}`, escala: 0.28, peso: 700 },
           { texto: `botones: ${datos.botones || '-'} · ejes: ${datos.ejes}`, escala: 0.25, peso: 500 },
+          // La altura de la cabeza contra su reposo: sirve para ajustar los
+          // umbrales del agache si resultan muy sensibles o muy duros.
+          { texto: `cabeza: ${datos.cabeza}`, escala: 0.25, peso: 500 },
           { texto: `giro: ${datos.giro}° · piso: ${datos.espacio}`, escala: 0.25, peso: 500 },
           {
             texto: errores.length ? `ERROR: ${errores[0]}` : 'sin errores de JS',
@@ -240,6 +243,38 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   // dispare una sola vez.
   let saltarAntes = false;
   let agacharAntes = false;
+  // Agacharse con el cuerpo: se compara la altura de la cabeza contra su
+  // altura de reposo, que se aprende sola durante la partida.
+  let alturaReposo = 0;
+  let agachadoFisico = false;
+
+  // La cámara vive dentro del rig, así que su Y local ES la altura de la
+  // cabeza sobre el piso virtual: no hace falta convertir a coordenadas de
+  // mundo ni descontar la elevación del rig.
+  function revisarAgacheFisico() {
+    if (!XR.AGACHE_FISICO) return;
+    const altura = camara.position.y;
+    if (altura <= 0) return; // todavía no llegó una pose válida
+
+    if (alturaReposo === 0) {
+      alturaReposo = altura;
+      return;
+    }
+    // El reposo sólo sube, y de a poco: si bajara al agacharse, el gesto se
+    // "normalizaría" y dejaría de detectarse a los pocos segundos.
+    if (altura > alturaReposo) alturaReposo += (altura - alturaReposo) * 0.08;
+
+    const bajada = alturaReposo - altura;
+    if (!agachadoFisico && bajada > XR.AGACHE_BAJAR) {
+      agachadoFisico = true;
+      acciones.agacharse?.();
+    } else if (agachadoFisico && bajada < XR.AGACHE_SUBIR) {
+      agachadoFisico = false;
+      acciones.soltarAgacharse?.();
+    }
+
+    informe.cabeza = `${altura.toFixed(2)}/${alturaReposo.toFixed(2)}${agachadoFisico ? ' AGACHADO' : ''}`;
+  }
   // Lo último que reportaron los mandos, para el panel de diagnóstico.
   const informe = {
     mandos: 0,
@@ -250,6 +285,7 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     giro: '0',
     vistas: 0,
     espacio: '-',
+    cabeza: '-',
   };
 
   function revisarMandos() {
@@ -300,10 +336,9 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     // tiene que sostener dos ojos a 90 fps.
     renderer.xr.setFoveation(XR.FOVEACION);
 
-    // El jugador queda donde estaba la cámara en pantalla plana: detrás y
-    // apenas arriba de Migue. La altura la aporta su propio cuerpo, así que
-    // el rig va al piso.
-    rig.position.set(0, 0, XR.RIG_Z);
+    // El jugador queda detrás de Migue y un escalón por encima de la calle:
+    // ver XR.RIG_Y para por qué no va al ras del piso.
+    rig.position.set(0, XR.RIG_Y, XR.RIG_Z);
     rig.rotation.set(0, 0, 0);
     // El recentrado se hace en el bucle, no acá: recién en el primer cuadro
     // de la sesión hay una pose de cabeza real para medir.
@@ -320,6 +355,8 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     vineta.visible = false;
     saltarAntes = false;
     agacharAntes = false;
+    alturaReposo = 0;
+    agachadoFisico = false;
     pintarBoton('Entrar en VR', true);
     alSalir?.();
   });
@@ -360,6 +397,7 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
         recentrarRig(rig, camara);
       }
       revisarMandos();
+      revisarAgacheFisico();
       if (diagnostico) {
         informe.giro = ((rig.rotation.y * 180) / Math.PI).toFixed(0);
         // La cámara de XR es una ArrayCamera con una subcámara por ojo:

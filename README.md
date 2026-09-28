@@ -104,6 +104,10 @@ Lo que cambia adentro de la sesión, y por qué:
 | Sacudida al chocar | sí | no — mover el punto de vista sin que la persona lo mueva marea |
 | Viñeta de confort | no | sí — recorta la visión periférica mientras el mundo avanza |
 
+**Controles en VR:** el **gatillo** salta y el **grip** agacha (también A/X y B/Y, y la palanca). Además se puede **agachar agachándose de verdad**: el juego compara la altura de tu cabeza contra su altura de reposo, que aprende sola sin calibrar nada. Los dos umbrales son distintos a propósito (bajar 26 cm para activar, volver a 14 cm para soltar) para que la agachada no titile cuando la cabeza queda justo en el límite. Además de natural, mover el cuerpo de verdad reduce el mareo.
+
+**Por qué el punto de vista está elevado** (`XR.RIG_Y`): Migue mide 1,80 y una persona tiene los ojos a ~1,60, así que su cabeza sobresale del horizonte visual y tapa justo la franja donde aparecen los carteles que vienen de lejos. Alejarse no arregla nada — desde 6 m sigue tapando. Hay que mirar desde **más arriba que el personaje**, como parado en un escalón. Hay un test que lo verifica para estaturas de 1,45 a 1,85.
+
 **Los dos HUD implementan la misma interfaz de 16 métodos.** [`src/main.js`](src/main.js) habla con un proxy que reenvía cada llamada al que esté activo, así que la lógica del juego no sabe en qué modo corre y no hubo que tocarla. Si mañana se agrega un método al HUD, hay que agregarlo en los dos.
 
 Los paneles se cuelgan del **rig** del jugador, no de la cámara: pegados a la cámara te persiguen la mirada, que en VR es incómodo; colgados del rig quedan quietos respecto al cuerpo y se miran girando la cabeza.

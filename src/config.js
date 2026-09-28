@@ -176,10 +176,28 @@ export const CAMARA = {
 };
 
 export const XR = {
-  // Dónde queda el cuerpo del jugador dentro de la escena: en el mismo
-  // lugar que la cámara de pantalla plana, detrás de Migue. La altura la
-  // aporta la persona (el origen 'local-floor' está en el piso real).
-  RIG_Z: 4.6,
+  // Dónde queda el cuerpo del jugador dentro de la escena, detrás de Migue.
+  //
+  // RIG_Y levanta el piso virtual, como estar parado en un escalón, y no es
+  // capricho: Migue mide 1,80 y una persona tiene los ojos a ~1,60, así que
+  // su cabeza sobresale del horizonte visual y tapa justo la franja donde
+  // aparecen los carteles que vienen de lejos. Alejarse no arregla nada
+  // (desde 6 m sigue tapando); hay que mirar desde MÁS ARRIBA que el
+  // personaje. Con este valor los ojos quedan a ~2,15 y la cabeza de Migue
+  // cae por debajo de la base de un cartel a 20 m.
+  RIG_Y: 0.55,
+  RIG_Z: 5.2,
+
+  // Agacharse agachándose de verdad. En un visor es el gesto natural, y
+  // encima ayuda con el mareo: mover el cuerpo de verdad reduce el conflicto
+  // con el oído interno. El grip del mando sigue funcionando en paralelo.
+  //
+  // La altura de reposo se aprende sola (no hay que calibrar nada) y los dos
+  // umbrales distintos evitan que la agachada titile cuando la cabeza queda
+  // justo en el límite.
+  AGACHE_FISICO: true,
+  AGACHE_BAJAR: 0.26, // cuánto hay que bajar la cabeza para agacharse
+  AGACHE_SUBIR: 0.14, // hasta dónde hay que volver a subir para soltarla
 
   // Viñeta de confort: un plano con degradado radial pegado delante de los
   // ojos, transparente en el centro y opaco en los bordes. Recorta la
