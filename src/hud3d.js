@@ -51,6 +51,9 @@ export function crearHud3d(rig) {
   // un panel, así que hay que conservarlos para repintar el conjunto.
   const datos = { vidas: JUEGO.VIDAS, puntaje: 0, soles: 0, racha: 0, nivel: '' };
   let temporizadorFrase = null;
+  // 'mandos' | 'manos': define qué gestos se explican en la pantalla de
+  // espera. Lo avisa xr.js cuando la persona apoya o levanta los mandos.
+  let modoEntrada = 'mandos';
 
   function pintarEstado() {
     const corazones = '❤'.repeat(datos.vidas) + '♡'.repeat(Math.max(0, JUEGO.VIDAS - datos.vidas));
@@ -73,6 +76,14 @@ export function crearHud3d(rig) {
   }
 
   return {
+    // La persona apoyó los mandos y pasó a manos, o al revés. Si está en la
+    // pantalla de espera hay que repintarla para que explique los gestos
+    // que ahora corresponden.
+    cambioDeEntrada(modo) {
+      modoEntrada = modo;
+      if (pantalla.malla.visible) this.mostrarAtraccion();
+    },
+
     // Se llama al entrar y salir de VR.
     activar(valor) {
       if (!valor) for (const p of todos) p.malla.visible = false;
@@ -98,18 +109,34 @@ export function crearHud3d(rig) {
         ...(record > 0
           ? [{ texto: `☀ Récord: ${record}`, color: COLORES_PANEL.dorado, escala: 0.55 }]
           : []),
-        { texto: 'GATILLO (o A) = saltar · elegís a MIGUE', escala: 0.42, peso: 700 },
-        { texto: 'GRIP (o B) = agacharte · elegís a CHANBACHI', escala: 0.42, peso: 700 },
+        ...(modoEntrada === 'manos'
+          ? [
+              // Sin mandos no hay grip, así que las acciones se reparten por
+              // mano. Se nombra el gesto como lo entiende cualquiera, no
+              // como lo llama la especificación ("pinch").
+              { texto: 'MANO DERECHA: juntá los dedos = saltar · MIGUE', escala: 0.4, peso: 700 },
+              { texto: 'MANO IZQUIERDA: juntá los dedos = agacharte · CHANBACHI', escala: 0.4, peso: 700 },
+              {
+                texto: 'Las dos manos juntas 2 s = salir de VR',
+                color: COLORES_PANEL.celeste,
+                escala: 0.34,
+                peso: 500,
+              },
+            ]
+          : [
+              { texto: 'GATILLO (o A) = saltar · elegís a MIGUE', escala: 0.4, peso: 700 },
+              { texto: 'GRIP (o B) = agacharte · elegís a CHANBACHI', escala: 0.4, peso: 700 },
+              {
+                texto: 'Los dos botones juntos 2 s = salir de VR',
+                color: COLORES_PANEL.celeste,
+                escala: 0.34,
+                peso: 500,
+              },
+            ]),
         {
           texto: 'También podés agacharte agachándote de verdad',
           color: COLORES_PANEL.celeste,
-          escala: 0.36,
-          peso: 500,
-        },
-        {
-          texto: 'Los dos botones juntos 2 s = salir de VR',
-          color: COLORES_PANEL.celeste,
-          escala: 0.36,
+          escala: 0.34,
           peso: 500,
         },
       ]);

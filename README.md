@@ -104,7 +104,11 @@ Lo que cambia adentro de la sesión, y por qué:
 | Sacudida al chocar | sí | no — mover el punto de vista sin que la persona lo mueva marea |
 | Viñeta de confort | no | sí — recorta la visión periférica mientras el mundo avanza |
 
-**Controles en VR:** el **gatillo** salta y el **grip** agacha (también A/X y B/Y, y la palanca). Además se puede **agachar agachándose de verdad**: el juego compara la altura de tu cabeza contra su altura de reposo, que aprende sola sin calibrar nada. Los dos umbrales son distintos a propósito (bajar 26 cm para activar, volver a 14 cm para soltar) para que la agachada no titile cuando la cabeza queda justo en el límite. Además de natural, mover el cuerpo de verdad reduce el mareo.
+**Controles en VR:** el **gatillo** salta y el **grip** agacha (también A/X y B/Y, y la palanca). Sostener los dos a la vez 2 segundos sale de VR, con cuenta regresiva en pantalla para que nadie se salga sin querer.
+
+**Jugar sin mandos, con las manos:** si la persona apoya los mandos, el Quest pasa solo a seguimiento de manos y el juego se adapta: **mano derecha juntando los dedos = saltar, mano izquierda = agacharse**, y las dos juntas 2 segundos = salir. El reparto por mano existe porque sin mandos no hay grip: WebXR unifica el gatillo y el *pinch* en el mismo evento `select`, pero `squeeze` no tiene equivalente con manos. Se usa el pinch en vez de inventar un gesto propio (puño, palma abajo) porque el sistema ya lo entrega calibrado y no da los falsos positivos de un gesto casero. El cambio se detecta por cuadro —el Quest no avisa por ningún evento— y la pantalla de espera se repinta sola con los gestos que correspondan.
+
+**Agacharse agachándose de verdad:** funciona con mandos y con manos. El juego compara la altura de tu cabeza contra su altura de reposo, que aprende sola sin calibrar nada. Los dos umbrales son distintos a propósito (bajar 26 cm para activar, volver a 14 cm para soltar) para que la agachada no titile cuando la cabeza queda justo en el límite. Además de natural, mover el cuerpo de verdad reduce el mareo.
 
 **Por qué el punto de vista está elevado** (`XR.RIG_Y`): Migue mide 1,80 y una persona tiene los ojos a ~1,60, así que su cabeza sobresale del horizonte visual y tapa justo la franja donde aparecen los carteles que vienen de lejos. Alejarse no arregla nada — desde 6 m sigue tapando. Hay que mirar desde **más arriba que el personaje**, como parado en un escalón. Hay un test que lo verifica para estaturas de 1,45 a 1,85.
 

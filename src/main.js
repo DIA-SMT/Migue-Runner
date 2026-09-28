@@ -176,6 +176,10 @@ const xr = crearXR({
     // Avisos del propio modo VR (hoy la cuenta para salir), que no son
     // eventos de juego sino de la sesión.
     avisar: (texto) => hud3d.avisar(texto),
+    // La persona apoyó los mandos y el Quest pasó a seguir las manos, o al
+    // revés. Los gestos cambian, así que la pantalla de espera tiene que
+    // explicar los que corresponden.
+    cambioDeEntrada: (modo) => hud3d.cambioDeEntrada(modo),
   },
   alEntrar() {
     hudDom.mostrarAtraccion(); // deja el DOM en un estado limpio detrás

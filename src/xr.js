@@ -83,7 +83,7 @@ function crearDiagnostico(rig) {
           },
           // Separador visible: el ajuste de línea colapsa los espacios
           // múltiples, así que dos datos en un renglón quedaban pegados.
-          { texto: `mandos: ${datos.mandos} · fps: ${fps}`, escala: 0.28, peso: 700 },
+          { texto: `entrada: ${datos.entrada} ${datos.mandos} · fps: ${fps}`, escala: 0.28, peso: 700 },
           { texto: `gatillo: ${datos.gatillo} · grip: ${datos.grip}`, escala: 0.28, peso: 700 },
           { texto: `botones: ${datos.botones || '-'} · ejes: ${datos.ejes}`, escala: 0.25, peso: 500 },
           // La altura de la cabeza contra su reposo: sirve para ajustar los
@@ -207,7 +207,9 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
       const sesion = await navigator.xr.requestSession('immersive-vr', {
         // 'local-floor' pone el origen en el piso real, así que la persona
         // queda parada en la peatonal a su altura verdadera.
-        optionalFeatures: ['local-floor', 'bounded-floor'],
+        // 'hand-tracking' habilita jugar sin mandos, con las manos: sin
+        // pedirlo, inputSource.hand siempre viene vacío.
+        optionalFeatures: ['local-floor', 'bounded-floor', 'hand-tracking'],
       });
       await renderer.xr.setSession(sesion);
     } catch (error) {
@@ -224,19 +226,42 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   // la sesión hay que usar los eventos de la propia sesión y, para los
   // botones que no tienen evento propio, session.inputSources[].gamepad.
   function conectarMandos(sesion) {
-    // 'select' es el gatillo y 'squeeze' el grip, en los dos mandos.
-    // El informe deja constancia de que el evento llegó, así el panel de
-    // diagnóstico distingue "el botón no hace nada" de "el evento no llega".
-    sesion.addEventListener('selectstart', () => {
+    // 'select' es el gatillo del mando Y el pinch de la mano (juntar pulgar
+    // e índice): WebXR unifica los dos en el mismo evento. 'squeeze' es el
+    // grip, y con manos no tiene equivalente.
+    //
+    // De ahí el reparto: con MANDO los dos gatillos saltan y el grip agacha,
+    // pero con MANOS no hay grip, así que se reparte por mano — derecha
+    // salta, izquierda agacha. El pinch se usa en vez de inventar un gesto
+    // propio (puño, palma abajo) porque el sistema ya lo entrega calibrado
+    // y no da los falsos positivos de un gesto casero.
+    sesion.addEventListener('selectstart', (evento) => {
+      const mano = evento.inputSource;
       informe.gatillo = 'SI';
-      acciones.saltar?.();
+      if (esMano(mano)) {
+        pinchActivo[mano.handedness] = true;
+        if (mano.handedness === 'left') acciones.agacharse?.();
+        else acciones.saltar?.();
+      } else {
+        acciones.saltar?.();
+      }
     });
+
+    sesion.addEventListener('selectend', (evento) => {
+      const mano = evento.inputSource;
+      if (!esMano(mano)) return;
+      pinchActivo[mano.handedness] = false;
+      if (mano.handedness === 'left') acciones.soltarAgacharse?.();
+    });
+
     sesion.addEventListener('squeezestart', () => {
       informe.grip = 'SI';
       acciones.agacharse?.();
     });
     sesion.addEventListener('squeezeend', () => acciones.soltarAgacharse?.());
   }
+
+  const esMano = (fuente) => !!fuente?.hand;
 
   // Botones A/B/X/Y y palancas: no emiten eventos de sesión, así que se
   // consultan por cuadro. Se detecta el flanco para que mantener apretado
@@ -247,8 +272,14 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   // altura de reposo, que se aprende sola durante la partida.
   let alturaReposo = 0;
   let agachadoFisico = false;
-  // Cuándo empezó el gesto de salida (los dos botones juntos).
+  // Cuándo empezó el gesto de salida (los dos controles a la vez).
   let salirDesde = 0;
+  // Pinch de cada mano, para el gesto de salida sin mandos.
+  const pinchActivo = { left: false, right: false };
+  // 'mandos' | 'manos'. Cambia solo cuando la persona suelta los mandos: el
+  // Quest pasa a seguimiento de manos sin avisar, y el HUD tiene que
+  // explicar los gestos que correspondan.
+  let modoEntrada = 'mandos';
 
   // La cámara vive dentro del rig, así que su Y local ES la altura de la
   // cabeza sobre el piso virtual: no hace falta convertir a coordenadas de
@@ -289,6 +320,7 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     espacio: '-',
     cabeza: '-',
     salida: '-',
+    entrada: 'mandos',
   };
 
   function revisarMandos() {
@@ -304,6 +336,16 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     const apretados = [];
     const ejes = [];
     informe.mandos = sesion.inputSources.length;
+
+    // ¿Manos o mandos? Se mira en cada cuadro porque el Quest cambia solo
+    // cuando la persona apoya los mandos, sin avisar por ningún evento.
+    const hayManos = [...sesion.inputSources].some(esMano);
+    const modoAhora = hayManos ? 'manos' : 'mandos';
+    if (modoAhora !== modoEntrada) {
+      modoEntrada = modoAhora;
+      informe.entrada = modoEntrada;
+      acciones.cambioDeEntrada?.(modoEntrada);
+    }
 
     for (const fuente of sesion.inputSources) {
       const mando = fuente.gamepad;
@@ -335,7 +377,11 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     saltarAntes = saltar;
     agacharAntes = agachar;
 
-    revisarGestoSalida(sesion, gatillo && grip);
+    // Salir: con mandos, gatillo y grip a la vez; con manos, los dos pinches.
+    // En los dos casos es "los dos controles juntos", que es lo que se
+    // anuncia en pantalla.
+    const losDos = hayManos ? pinchActivo.left && pinchActivo.right : gatillo && grip;
+    revisarGestoSalida(sesion, losDos);
   }
 
   // Mantener los dos botones a la vez cierra la sesión. Se avisa el
