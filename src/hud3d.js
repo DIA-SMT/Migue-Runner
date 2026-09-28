@@ -112,12 +112,12 @@ export function crearHud3d(rig) {
         ...(modoEntrada === 'manos'
           ? [
               // Sin mandos no hay grip, así que las acciones se reparten por
-              // mano. Se nombra el gesto como lo entiende cualquiera, no
-              // como lo llama la especificación ("pinch").
-              { texto: 'MANO DERECHA: juntá los dedos = saltar · MIGUE', escala: 0.4, peso: 700 },
-              { texto: 'MANO IZQUIERDA: juntá los dedos = agacharte · CHANBACHI', escala: 0.4, peso: 700 },
+              // mano. El gesto es levantar la mano y no juntar los dedos:
+              // el pinch se lo lleva el menú del propio visor.
+              { texto: 'LEVANTÁ LA MANO DERECHA = saltar · MIGUE', escala: 0.4, peso: 700 },
+              { texto: 'LEVANTÁ LA IZQUIERDA = agacharte · CHANBACHI', escala: 0.4, peso: 700 },
               {
-                texto: 'Las dos manos juntas 2 s = salir de VR',
+                texto: 'Las dos manos arriba 2 s = salir de VR',
                 color: COLORES_PANEL.celeste,
                 escala: 0.34,
                 peso: 500,

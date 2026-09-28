@@ -88,7 +88,10 @@ function crearDiagnostico(rig) {
           { texto: `botones: ${datos.botones || '-'} · ejes: ${datos.ejes}`, escala: 0.25, peso: 500 },
           // La altura de la cabeza contra su reposo: sirve para ajustar los
           // umbrales del agache si resultan muy sensibles o muy duros.
-          { texto: `cabeza: ${datos.cabeza}`, escala: 0.25, peso: 500 },
+          // `manos` es cuánto más abajo que los ojos está cada muñeca, con ^
+          // si el juego la da por levantada: sirve para ajustar los umbrales
+          // MANO_LEVANTAR / MANO_BAJAR leyéndolos desde adentro del visor.
+          { texto: `cabeza: ${datos.cabeza} · manos: ${datos.manos}`, escala: 0.25, peso: 500 },
           { texto: `giro: ${datos.giro}° · piso: ${datos.espacio} · salir: ${datos.salida}`, escala: 0.25, peso: 500 },
           {
             texto: errores.length ? `ERROR: ${errores[0]}` : 'sin errores de JS',
@@ -226,34 +229,24 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   // la sesión hay que usar los eventos de la propia sesión y, para los
   // botones que no tienen evento propio, session.inputSources[].gamepad.
   function conectarMandos(sesion) {
-    // 'select' es el gatillo del mando Y el pinch de la mano (juntar pulgar
-    // e índice): WebXR unifica los dos en el mismo evento. 'squeeze' es el
-    // grip, y con manos no tiene equivalente.
+    // 'select' lo disparan TANTO el gatillo del mando COMO el pinch de la
+    // mano (juntar pulgar e índice): WebXR unifica los dos en el mismo
+    // evento. Acá el de las manos se ignora A PROPÓSITO.
     //
-    // De ahí el reparto: con MANDO los dos gatillos saltan y el grip agacha,
-    // pero con MANOS no hay grip, así que se reparte por mano — derecha
-    // salta, izquierda agacha. El pinch se usa en vez de inventar un gesto
-    // propio (puño, palma abajo) porque el sistema ya lo entrega calibrado
-    // y no da los falsos positivos de un gesto casero.
+    // El pinch fue la primera versión y en el visor real se cayó: pinchar
+    // con la palma hacia la cara es el gesto con el que el propio Quest
+    // abre su menú de aplicaciones, y desde la web no se puede desactivar.
+    // Jugando a pinchazos, cada tanto el sistema se lleva el gesto y
+    // aparecen aplicaciones o te saca de la sesión. Con manos se juega
+    // levantándolas (ver revisarMandos), que no choca con nada del sistema.
     sesion.addEventListener('selectstart', (evento) => {
-      const mano = evento.inputSource;
+      if (esMano(evento.inputSource)) return;
       informe.gatillo = 'SI';
-      if (esMano(mano)) {
-        pinchActivo[mano.handedness] = true;
-        if (mano.handedness === 'left') acciones.agacharse?.();
-        else acciones.saltar?.();
-      } else {
-        acciones.saltar?.();
-      }
+      acciones.saltar?.();
     });
 
-    sesion.addEventListener('selectend', (evento) => {
-      const mano = evento.inputSource;
-      if (!esMano(mano)) return;
-      pinchActivo[mano.handedness] = false;
-      if (mano.handedness === 'left') acciones.soltarAgacharse?.();
-    });
-
+    // 'squeeze' es el grip, que sólo existe en los mandos: las manos nunca
+    // lo disparan, así que no hace falta filtrarlo.
     sesion.addEventListener('squeezestart', () => {
       informe.grip = 'SI';
       acciones.agacharse?.();
@@ -274,8 +267,8 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   let agachadoFisico = false;
   // Cuándo empezó el gesto de salida (los dos controles a la vez).
   let salirDesde = 0;
-  // Pinch de cada mano, para el gesto de salida sin mandos.
-  const pinchActivo = { left: false, right: false };
+  // Qué mano está levantada ahora mismo, jugando sin mandos.
+  const manoLevantada = { left: false, right: false };
   // 'mandos' | 'manos'. Cambia solo cuando la persona suelta los mandos: el
   // Quest pasa a seguimiento de manos sin avisar, y el HUD tiene que
   // explicar los gestos que correspondan.
@@ -321,7 +314,52 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     cabeza: '-',
     salida: '-',
     entrada: 'mandos',
+    manos: '-',
   };
+
+  // Altura de la muñeca de una mano, o null si el visor no la está viendo.
+  //
+  // Viene en el espacio de referencia de la sesión, que es el MISMO marco en
+  // el que three deja camara.position (la cámara cuelga del rig, así que su
+  // posición local es la pose de la cabeza sobre el piso). Por eso se pueden
+  // restar directamente sin convertir a coordenadas de mundo.
+  function alturaDeMuneca(fuente) {
+    const marco = renderer.xr.getFrame?.();
+    const espacio = renderer.xr.getReferenceSpace();
+    if (!marco || !espacio) return null;
+    const muneca = fuente.hand.get('wrist');
+    if (!muneca) return null;
+    const pose = marco.getJointPose(muneca, espacio);
+    return pose ? pose.transform.position.y : null;
+  }
+
+  // Levantar la mano derecha salta y la izquierda agacha. El umbral se mide
+  // contra la altura de los OJOS, no contra el piso, así que no hay que
+  // calibrar nada para cada persona.
+  function revisarManos(sesion) {
+    const ojos = camara.position.y;
+    const caida = { left: null, right: null };
+    for (const fuente of sesion.inputSources) {
+      if (esMano(fuente)) caida[fuente.handedness] = alturaDeMuneca(fuente);
+    }
+
+    for (const lado of ['left', 'right']) {
+      const altura = caida[lado];
+      // Sin pose no hay mano a la vista. Cuenta como bajada a propósito: si
+      // el visor pierde la mano con la agachada puesta, se suelta sola en
+      // vez de quedar agachado para siempre.
+      const bajo = altura === null ? Infinity : ojos - altura;
+      if (!manoLevantada[lado] && bajo < XR.MANO_LEVANTAR) manoLevantada[lado] = true;
+      else if (manoLevantada[lado] && bajo > XR.MANO_BAJAR) manoLevantada[lado] = false;
+      caida[lado] = bajo;
+    }
+
+    informe.manos = ['left', 'right']
+      .map((l) => (caida[l] === Infinity ? '-' : caida[l].toFixed(2)) + (manoLevantada[l] ? '^' : ''))
+      .join('/');
+
+    return { saltar: manoLevantada.right, agachar: manoLevantada.left };
+  }
 
   function revisarMandos() {
     const sesion = renderer.xr.getSession();
@@ -345,6 +383,16 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
       modoEntrada = modoAhora;
       informe.entrada = modoEntrada;
       acciones.cambioDeEntrada?.(modoEntrada);
+    }
+
+    if (hayManos) {
+      const manos = revisarManos(sesion);
+      saltar = manos.saltar;
+      agachar = manos.agachar;
+    } else {
+      manoLevantada.left = false;
+      manoLevantada.right = false;
+      informe.manos = '-';
     }
 
     for (const fuente of sesion.inputSources) {
@@ -377,10 +425,10 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     saltarAntes = saltar;
     agacharAntes = agachar;
 
-    // Salir: con mandos, gatillo y grip a la vez; con manos, los dos pinches.
-    // En los dos casos es "los dos controles juntos", que es lo que se
-    // anuncia en pantalla.
-    const losDos = hayManos ? pinchActivo.left && pinchActivo.right : gatillo && grip;
+    // Salir: con mandos, gatillo y grip a la vez; con manos, las dos manos
+    // levantadas. En los dos casos es "los dos controles juntos", que es lo
+    // que se anuncia en pantalla.
+    const losDos = hayManos ? manoLevantada.left && manoLevantada.right : gatillo && grip;
     revisarGestoSalida(sesion, losDos);
   }
 
@@ -437,6 +485,8 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
     agacharAntes = false;
     alturaReposo = 0;
     agachadoFisico = false;
+    manoLevantada.left = false;
+    manoLevantada.right = false;
     pintarBoton('Entrar en VR', true);
     alSalir?.();
   });

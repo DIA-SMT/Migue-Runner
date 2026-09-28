@@ -199,6 +199,27 @@ export const XR = {
   AGACHE_BAJAR: 0.26, // cuánto hay que bajar la cabeza para agacharse
   AGACHE_SUBIR: 0.14, // hasta dónde hay que volver a subir para soltarla
 
+  // Jugar sin mandos: se LEVANTA LA MANO, no se hace pinch.
+  //
+  // El pinch parecía la opción obvia porque WebXR ya lo entrega calibrado,
+  // pero en el visor real abría aplicaciones y sacaba de la sesión: juntar
+  // pulgar e índice con la palma hacia la cara es EL gesto con el que el
+  // propio Quest abre su menú, y desde la web no hay forma de desactivarlo.
+  // Al pinchar seguido, tarde o temprano la mano queda en esa pose y el
+  // sistema se lleva el gesto. Levantar la mano no choca con nada del
+  // sistema, y además es una pose que las cámaras ven bien (un puño se
+  // tapa los dedos a sí mismo y el seguimiento se degrada).
+  //
+  // Se mide cuánto MÁS ABAJO QUE LOS OJOS está la muñeca, así que anda
+  // igual para alguien de 1,50 que de 1,90 sin calibrar nada. De referencia:
+  // brazos al costado ≈ 0,85 m por debajo de los ojos; mano al pecho ≈ 0,40;
+  // mano a la altura del cuello ≈ 0,25; mano a la cara ≈ 0,05.
+  //
+  // Dos umbrales distintos por lo mismo que el agache físico: con uno solo
+  // la agachada titila cuando la mano queda justo en el límite.
+  MANO_LEVANTAR: 0.25, // hay que subir la muñeca hasta acá para que cuente
+  MANO_BAJAR: 0.45, // y bajarla hasta acá para soltar
+
   // Viñeta de confort: un plano con degradado radial pegado delante de los
   // ojos, transparente en el centro y opaco en los bordes. Recorta la
   // visión periférica mientras el mundo avanza, que es la mitigación
