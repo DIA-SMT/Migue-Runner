@@ -47,7 +47,12 @@ import { crearEstados } from './states.js';
 // ---------------------------------------------------------------------------
 const app = document.querySelector('#app');
 
-const renderer = new THREE.WebGLRenderer({ antialias: false, powerPreference: 'high-performance' });
+// antialias: en pantalla plana lo aporta el MSAA del render target del
+// composer, pero en VR el composer no se usa (no soporta XR) y sin esto
+// todos los bordes quedan serruchados, que de cerca en un visor se nota
+// muchísimo. El costo en plano es bajo porque al canvas sólo llega el
+// último pase.
+const renderer = new THREE.WebGLRenderer({ antialias: true, powerPreference: 'high-performance' });
 renderer.setPixelRatio(Math.min(window.devicePixelRatio, RENDER.MAX_PIXEL_RATIO));
 renderer.setSize(window.innerWidth, window.innerHeight);
 renderer.shadowMap.enabled = true;
@@ -55,6 +60,20 @@ renderer.shadowMap.type = THREE.PCFShadowMap;
 // Sin tone mapping: la dirección de arte es de colores planos y el ACES
 // lava la paleta (el OutputPass lo aplicaría a todo el frame por igual).
 renderer.toneMapping = THREE.NoToneMapping;
+
+// OBLIGATORIO para VR, y su ausencia fue el bug que hacía que en el visor
+// se viera "todo cruzado": sin esto three.js no entra en modo XR aunque la
+// sesión arranque. No arma la cámara estéreo (una por ojo) ni dibuja en los
+// framebuffers que provee el dispositivo, así que pinta la vista plana
+// deformada sobre los dos ojos.
+//
+// Activarlo no cambia nada en pantalla plana: mientras no hay sesión, el
+// renderer funciona igual que siempre.
+renderer.xr.enabled = true;
+// Se fija antes de cualquier sesión: el origen va en el piso real, así la
+// persona queda parada en la peatonal a su altura.
+renderer.xr.setReferenceSpaceType('local-floor');
+
 app.appendChild(renderer.domElement);
 
 const escena = new THREE.Scene();
@@ -609,6 +628,27 @@ entrada.on('calibrar', () => {
 
 estados.cambiar('ATRACCION');
 
+// Con ?diag=1 se expone el estado del render para poder revisarlo desde la
+// consola del navegador. Sirve para confirmar la configuración de VR sin
+// tener que ponerse el visor, que es justo lo que no se puede hacer desde
+// una notebook.
+if (new URLSearchParams(location.search).get('diag') === '1') {
+  window.migue = {
+    renderer,
+    estadoXR: () => ({
+      xrHabilitado: renderer.xr.enabled,
+      enSesion: renderer.xr.isPresenting,
+      // En una sesión sana three arma una cámara por ojo: tiene que dar 2.
+      vistas: renderer.xr.getCamera()?.cameras?.length ?? 0,
+      espacioDeReferencia: renderer.xr.getReferenceSpace() ? 'ok' : 'falta',
+      sombras: renderer.shadowMap.enabled,
+      hud: hudActivo === hud3d ? '3D' : 'DOM',
+      rig: { z: rig.position.z, giro: ((rig.rotation.y * 180) / Math.PI).toFixed(0) },
+    }),
+  };
+  console.info('Diagnóstico disponible: window.migue.estadoXR()');
+}
+
 // ---------------------------------------------------------------------------
 // Pantalla completa (pulido de stand): tecla F. No se fuerza sola porque
 // el navegador la rechaza sin gesto del usuario y sorprendería a quien
@@ -688,6 +728,11 @@ function anchoVisible(fovGrados, distancia, aspect) {
 }
 
 function ajustarCamara() {
+  // Durante una sesión de VR, el tamaño del dibujo y la proyección los
+  // maneja WebXR (una por ojo). Si el visor dispara un resize y acá se
+  // pisara el renderer con el tamaño de la ventana, se rompería la vista.
+  if (xr?.estaEnVR()) return;
+
   const aspect = window.innerWidth / window.innerHeight;
   camara.aspect = aspect;
 

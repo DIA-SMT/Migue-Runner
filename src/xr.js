@@ -67,20 +67,30 @@ function crearDiagnostico(rig) {
       }
       if (cuadros % XR.DIAG_CADA_CUADROS !== 0) return;
 
+      // `vistas` es EL dato que dice si el estéreo está bien: en una sesión
+      // de VR sana three arma una cámara por ojo, así que tiene que decir 2.
+      // Si dice 1, el visor está mostrando la imagen plana estirada sobre
+      // los dos ojos, que es lo que se ve como "todo cruzado".
+      const estereoOk = datos.vistas === 2;
       placa.escribir(
         [
           { texto: 'DIAGNÓSTICO', color: COLORES_PANEL.celeste, escala: 0.32 },
+          {
+            texto: `estéreo: ${datos.vistas} ${estereoOk ? 'vistas OK' : 'VISTAS — MAL'}`,
+            color: estereoOk ? COLORES_PANEL.ok : COLORES_PANEL.error,
+            escala: 0.3,
+            peso: 800,
+          },
           // Separador visible: el ajuste de línea colapsa los espacios
           // múltiples, así que dos datos en un renglón quedaban pegados.
           { texto: `mandos: ${datos.mandos} · fps: ${fps}`, escala: 0.28, peso: 700 },
           { texto: `gatillo: ${datos.gatillo} · grip: ${datos.grip}`, escala: 0.28, peso: 700 },
-          { texto: `botones: ${datos.botones || '-'}`, escala: 0.26, peso: 500 },
-          { texto: `ejes: ${datos.ejes}`, escala: 0.26, peso: 500 },
-          { texto: `giro del cuerpo: ${datos.giro}°`, escala: 0.26, peso: 500 },
+          { texto: `botones: ${datos.botones || '-'} · ejes: ${datos.ejes}`, escala: 0.25, peso: 500 },
+          { texto: `giro: ${datos.giro}° · piso: ${datos.espacio}`, escala: 0.25, peso: 500 },
           {
             texto: errores.length ? `ERROR: ${errores[0]}` : 'sin errores de JS',
             color: errores.length ? COLORES_PANEL.error : COLORES_PANEL.ok,
-            escala: 0.26,
+            escala: 0.25,
             peso: 700,
           },
         ],
@@ -231,7 +241,16 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   let saltarAntes = false;
   let agacharAntes = false;
   // Lo último que reportaron los mandos, para el panel de diagnóstico.
-  const informe = { mandos: 0, gatillo: '-', grip: '-', botones: '', ejes: '-', giro: '0' };
+  const informe = {
+    mandos: 0,
+    gatillo: '-',
+    grip: '-',
+    botones: '',
+    ejes: '-',
+    giro: '0',
+    vistas: 0,
+    espacio: '-',
+  };
 
   function revisarMandos() {
     const sesion = renderer.xr.getSession();
@@ -273,7 +292,14 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
   }
 
   renderer.xr.addEventListener('sessionstart', () => {
-    renderer.xr.setReferenceSpaceType('local-floor');
+    // El espacio de referencia ya quedó fijado al crear el renderer: tiene
+    // que estar puesto ANTES de abrir la sesión, no después.
+    //
+    // Foveación: el visor dibuja con menos detalle la periferia, que es
+    // donde la vista no enfoca. Es rendimiento gratis en un Quest, que
+    // tiene que sostener dos ojos a 90 fps.
+    renderer.xr.setFoveation(XR.FOVEACION);
+
     // El jugador queda donde estaba la cámara en pantalla plana: detrás y
     // apenas arriba de Migue. La altura la aporta su propio cuerpo, así que
     // el rig va al piso.
@@ -336,6 +362,10 @@ export function crearXR({ renderer, camara, rig, alEntrar, alSalir, acciones = {
       revisarMandos();
       if (diagnostico) {
         informe.giro = ((rig.rotation.y * 180) / Math.PI).toFixed(0);
+        // La cámara de XR es una ArrayCamera con una subcámara por ojo:
+        // 2 es lo correcto. Si diera 1, el renderizado estéreo no se armó.
+        informe.vistas = renderer.xr.getCamera()?.cameras?.length ?? 0;
+        informe.espacio = renderer.xr.getReferenceSpace() ? 'ok' : 'falta';
         diagnostico.actualizar(informe);
       }
     },

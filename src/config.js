@@ -229,6 +229,11 @@ export const XR = {
   DIAG: { x: 0.95, y: 1.15, z: -2.2, ancho: 0.9, alto: 0.62, giro: -0.38, orden: 104 },
   DIAG_CADA_CUADROS: 6, // cada cuántos cuadros se repinta
 
+  // Foveación: 0 = sin foveación (todo el cuadro con el mismo detalle),
+  // 1 = máxima (la periferia se dibuja con mucho menos detalle). Sube los
+  // fps casi sin costo visible, porque la vista no enfoca la periferia.
+  FOVEACION: 1,
+
   // Botones de los mandos del visor, mapeo 'xr-standard'.
   // El gatillo (0) y el grip (1) llegan por los eventos 'select' y
   // 'squeeze' de la sesión, así que acá van sólo los de pulgar: 4 = A/X,
